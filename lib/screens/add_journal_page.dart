@@ -19,49 +19,48 @@ class AddJournalPage extends StatefulWidget {
 
 class _AddJournalPageState extends State<AddJournalPage> {
   final _notificationHelper = NotificationHelper.instance;
-  // Controller untuk mengambil teks dari input field
   final _judulController = TextEditingController();
   final _ceritaController = TextEditingController();
-
-  // Panggil db helper
   final dbHelper = DatabaseHelper.instance;
-  Position? _currentPosition; // Untuk menyimpan data posisi
-  bool _isLoadingLocation = false; // Untuk penanda loading
+  
+  Position? _currentPosition;
+  bool _isLoadingLocation = false;
   String _addressString = "Mendeteksi lokasi...";
-  bool _useAutoLocation = true; // Flag untuk auto atau manual lokasi
+  bool _useAutoLocation = true;
 
   final ImagePicker _picker = ImagePicker();
   List<String> _imagePaths = [];
   
-  // --- TAMBAHAN UNTUK TANGGAL ---
-  DateTime _selectedDate = DateTime.now(); // Default tanggal hari ini
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
   }
-  // --- TAMBAHKAN FUNGSI BARU INI ---
+
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 80, // Kompres sedikit
+        imageQuality: 80,
       );
 
       if (pickedFile != null) {
         setState(() {
-          _imagePaths.add(pickedFile.path); // Tambah path ke list
+          _imagePaths.add(pickedFile.path);
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Gagal mengambil gambar: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Gagal mengambil gambar: $e"),
+          backgroundColor: const Color(0xFFFF6B4A),
+        ),
+      );
     }
   }
 
-  // Fungsi untuk menghapus foto
   void _removeImage(int index) {
     setState(() {
       _imagePaths.removeAt(index);
@@ -74,17 +73,15 @@ class _AddJournalPageState extends State<AddJournalPage> {
         'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${position.latitude}&lon=${position.longitude}',
       );
 
-      // Kirim request GET
       final response = await http.get(
         url,
         headers: {
-          'User-Agent': 'jejak_pena_app', // API Nominatim butuh User-Agent
+          'User-Agent': 'jejak_pena_app',
         },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Ambil nama tampilan yang mudah dibaca
         return data['display_name'] ?? 'Lokasi tidak dikenal';
       } else {
         return 'Gagal mengambil nama lokasi';
@@ -93,7 +90,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
       return 'Error: ${e.toString()}';
     }
   }
-  // --- TAMBAHKAN FUNGSI BARU INI ---
+
   void _getCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
@@ -101,10 +98,8 @@ class _AddJournalPageState extends State<AddJournalPage> {
     });
 
     try {
-      // 1. Cek izin
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        // 2. Jika ditolak, minta izin
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           setState(() {
@@ -115,7 +110,6 @@ class _AddJournalPageState extends State<AddJournalPage> {
         }
       }
 
-      // 3. Jika izin diberikan, ambil lokasi
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -130,17 +124,17 @@ class _AddJournalPageState extends State<AddJournalPage> {
       setState(() {
         _addressString = "Gagal mendapatkan lokasi: ${e.toString()}";
         _isLoadingLocation = false;
-      });    }
+      });
+    }
   }
 
-  // Fungsi untuk mode auto lokasi
   void _useAutoLocationMode() {
     setState(() {
       _useAutoLocation = true;
     });
     _getCurrentLocation();
   }
-  // Fungsi untuk membuka location picker (memilih lokasi manual)
+
   Future<void> _openLocationPicker() async {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
@@ -158,18 +152,29 @@ class _AddJournalPageState extends State<AddJournalPage> {
       setState(() {
         _currentPosition = position;
         _addressString = address;
-        _useAutoLocation = false; // Tandai bahwa user memilih manual
+        _useAutoLocation = false;
       });
     }
   }
 
-  // --- FUNGSI UNTUK MEMILIH TANGGAL ---
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2020), // Tanggal awal
-      lastDate: DateTime.now(), // Tidak boleh lebih dari hari ini
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFFF6B4A),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null && picked != _selectedDate) {
@@ -177,21 +182,24 @@ class _AddJournalPageState extends State<AddJournalPage> {
         _selectedDate = picked;
       });
     }
-  }  void _saveJournal() async {
+  }
+
+  void _saveJournal() async {
     String judul = _judulController.text;
     String cerita = _ceritaController.text;
 
     if (judul.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Judul tidak boleh kosong!')),
+        const SnackBar(
+          content: Text('Judul tidak boleh kosong!'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
       );
       return;
     }
 
-    // Gunakan tanggal yang dipilih oleh user
     String tanggal = _selectedDate.toIso8601String();
 
-    // --- LANGKAH 1: SIMPAN JURNAL INDUK ---
     Map<String, dynamic> journalRow = {
       DatabaseHelper.columnJudul: judul,
       DatabaseHelper.columnCerita: cerita,
@@ -201,26 +209,21 @@ class _AddJournalPageState extends State<AddJournalPage> {
       DatabaseHelper.columnNamaLokasi: _addressString,
     };
 
-    // Simpan jurnal dan dapatkan ID-nya
     final journalId = await dbHelper.createJournal(journalRow);
     
-    // --- LANGKAH 2: SIMPAN FOTO-FOTO ---
     for (String path in _imagePaths) {
       Map<String, dynamic> photoRow = {
-        DatabaseHelper.columnPhotoJournalId: journalId, // Tautkan ke ID Jurnal
+        DatabaseHelper.columnPhotoJournalId: journalId,
         DatabaseHelper.columnPhotoPath: path,
       };
       await dbHelper.createJournalPhoto(photoRow);
     }
     
-    // --- LANGKAH 3: TAMPILKAN NOTIFIKASI JURNAL TERSIMPAN ---
     await _notificationHelper.showJournalSavedNotification();
 
-    // --- LANGKAH 4: CEK MILESTONE ---
     final milestoneHelper = MilestoneHelper();
     final activeMilestones = await milestoneHelper.checkAllMilestones();
     
-    // Tampilkan notifikasi untuk setiap milestone yang dicapai
     for (var milestone in activeMilestones) {
       final type = milestone['type'] as String;
       final milestoneNumber = milestone['milestone'] as int;
@@ -228,7 +231,6 @@ class _AddJournalPageState extends State<AddJournalPage> {
       final title = milestoneHelper.generateMilestoneText(type, milestoneNumber);
       final subtitle = milestoneHelper.generateMilestoneSubtitle(type, milestoneNumber);
       
-      // Delay sedikit agar notifikasi tidak overlap
       await Future.delayed(const Duration(milliseconds: 500));
       
       await _notificationHelper.showMilestoneNotification(
@@ -239,11 +241,10 @@ class _AddJournalPageState extends State<AddJournalPage> {
     }
 
     if (mounted) {
-      Navigator.pop(context); // Kembali ke home
+      Navigator.pop(context);
     }
   }
 
-  // Selalu dispose controller setelah tidak dipakai
   @override
   void dispose() {
     _judulController.dispose();
@@ -254,209 +255,282 @@ class _AddJournalPageState extends State<AddJournalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Jurnal Baru'),
+        backgroundColor: const Color(0xFFFF6B4A),
+        foregroundColor: Colors.white,
+        title: const Text('Jurnal Baru', style: TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
         actions: [
-          // Tambahkan tombol "Simpan" di AppBar
           IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveJournal, // Panggil fungsi simpan
+            icon: const Icon(Icons.check),
+            onPressed: _saveJournal,
           ),
         ],
-      ),      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // BAGIAN LOKASI
-              Container(
-                padding: const EdgeInsets.all(12),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.indigo.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (_isLoadingLocation)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Lokasi Section
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFF6B4A).withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (_isLoadingLocation)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFFF6B4A),
                           ),
-                        if (!_isLoadingLocation && _currentPosition != null)
-                          const Icon(
-                            Icons.location_on,
-                            color: Colors.indigo,
-                            size: 20,
-                          ),
-                        if (!_isLoadingLocation && _currentPosition == null)
-                          const Icon(
-                            Icons.location_off,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                        const SizedBox(width: 12),
-                        // Tampilkan pesan status
-                        Expanded(child: Text(_addressString)),
-                      ],
-                    ),                    const SizedBox(height: 12),
-                    // Tombol untuk mengubah mode lokasi
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.my_location),
+                        ),
+                      if (!_isLoadingLocation && _currentPosition != null)
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFFFF6B4A),
+                          size: 20,
+                        ),
+                      if (!_isLoadingLocation && _currentPosition == null)
+                        const Icon(
+                          Icons.location_off,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _addressString,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.my_location, size: 18),
                           label: const Text("Auto Lokasi"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _useAutoLocation ? Colors.indigo : Colors.grey,
+                            backgroundColor: _useAutoLocation 
+                                ? const Color(0xFFFF6B4A) 
+                                : Colors.grey[300],
+                            foregroundColor: _useAutoLocation 
+                                ? Colors.white 
+                                : Colors.grey[700],
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           onPressed: _useAutoLocationMode,
                         ),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.map),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.map, size: 18),
                           label: const Text("Pilih di Peta"),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: !_useAutoLocation ? Colors.indigo : Colors.grey,
+                            backgroundColor: !_useAutoLocation 
+                                ? const Color(0xFFFF6B4A) 
+                                : Colors.white,
+                            foregroundColor: !_useAutoLocation 
+                                ? Colors.white 
+                                : const Color(0xFFFF6B4A),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           onPressed: _openLocationPicker,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Input field untuk Judul
-              TextField(
-                controller: _judulController,
-                decoration: const InputDecoration(
-                  labelText: 'Judul',
-                  border: OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-              ),              const SizedBox(height: 16),
-              // Input field untuk Cerita
-              TextField(
-                controller: _ceritaController,
-                decoration: const InputDecoration(
-                  labelText: 'Cerita Anda...',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 10, // Buat field lebih besar
-                textCapitalization: TextCapitalization.sentences,
-              ),
-              const SizedBox(height: 16),
-              // --- BAGIAN INPUT TANGGAL ---
-              GestureDetector(
-                onTap: _selectDate,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Tanggal Jurnal',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 4),                          Text(
-                            DateFormat('d MMMM yyyy').format(_selectedDate),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                          ),
-                        ],
                       ),
-                      const Icon(Icons.calendar_today, color: Colors.indigo),
                     ],
-                  ),
-                ),
-              ),              
-              const SizedBox(height: 40),
-              const Text(
-                "Foto Jurnal",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 30),
-
-              // Preview foto dengan tombol hapus
-              if (_imagePaths.isNotEmpty)
-                Container(
-                  height: 120,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _imagePaths.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Stack(
-                          children: [
-                            // Foto
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(_imagePaths[index]),
-                                width: 100,
-                                height: 100,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            // Tombol Hapus (X)
-                            Positioned(
-                              top: 0,
-                              right: 0,
-                              child: GestureDetector(
-                                onTap: () => _removeImage(index),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.8),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  padding: const EdgeInsets.all(4),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // Tombol-tombol untuk ambil foto
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text("Kamera"),
-                    onPressed: () => _pickImage(ImageSource.camera),
-                  ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.photo_library),
-                    label: const Text("Galeri"),
-                    onPressed: () => _pickImage(ImageSource.gallery),
                   ),
                 ],
               ),
-              const SizedBox(height: 30),
-            ],
-          ),
+            ),
+
+            // Form inputs
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _judulController,
+                    decoration: InputDecoration(
+                      labelText: 'Judul',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFFF6B4A), width: 2),
+                      ),
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _ceritaController,
+                    decoration: InputDecoration(
+                      labelText: 'Cerita Anda...',
+                      labelStyle: const TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFFF6B4A), width: 2),
+                      ),
+                    ),
+                    maxLines: 10,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _selectDate,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[400]!),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tanggal Jurnal',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('d MMMM yyyy').format(_selectedDate),
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                          const Icon(Icons.calendar_today, color: Color(0xFFFF6B4A)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Foto Jurnal",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (_imagePaths.isNotEmpty)
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _imagePaths.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12.0),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(
+                                    File(_imagePaths[index]),
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () => _removeImage(index),
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFFF6B4A),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(6),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text("Kamera"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () => _pickImage(ImageSource.camera),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text("Galeri"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B4A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () => _pickImage(ImageSource.gallery),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

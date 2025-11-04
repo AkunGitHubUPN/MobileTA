@@ -120,7 +120,6 @@ class DatabaseHelper {
     Database db = await instance.database;
     return await db.insert(tablePhotos, row);
   }
-
   // 2. READ (Ambil foto berdasarkan ID jurnal)
   Future<List<Map<String, dynamic>>> getPhotosForJournal(int journalId) async {
     Database db = await instance.database;
@@ -128,6 +127,16 @@ class DatabaseHelper {
       tablePhotos,
       where: '$columnPhotoJournalId = ?',
       whereArgs: [journalId],
+    );
+  }
+
+  // 3. DELETE (Hapus foto berdasarkan ID foto)
+  Future<int> deletePhoto(int photoId) async {
+    Database db = await instance.database;
+    return await db.delete(
+      tablePhotos,
+      where: '$columnPhotoId = ?',
+      whereArgs: [photoId],
     );
   }
 

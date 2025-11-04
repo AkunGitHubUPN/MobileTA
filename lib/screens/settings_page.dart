@@ -1,5 +1,3 @@
-// Lokasi: lib/screens/settings_page.dart
-
 import 'package:flutter/material.dart';
 import '../helpers/security_helper.dart';
 import '../helpers/notification_helper.dart';
@@ -14,7 +12,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Pengaturan Keamanan
   final _securityHelper = SecurityHelper();
   final _notificationHelper = NotificationHelper.instance;
   bool _isLockEnabled = false;
@@ -28,7 +25,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    // Muat data keamanan
     final isLockEnabled = await _securityHelper.isLockEnabled();
     final isPinSet = await _securityHelper.isPinSet();
 
@@ -37,19 +33,20 @@ class _SettingsPageState extends State<SettingsPage> {
       _isPinSet = isPinSet;
     });
   }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFFF6B4A),
+      ),
+    );
   }
 
-  // Fungsi untuk menangani 'Aktifkan Kunci Aplikasi'
   Future<void> _onLockEnabledChanged(bool value) async {
     if (value == true) {
-      // Saat MENYALAKAN lock
       if (!_isPinSet) {
-        // 1. Jika PIN BELUM ADA, navigasi ke setup PIN
         final result = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
@@ -57,13 +54,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 LockScreenPage(purpose: LockScreenPurpose.setupPin),
           ),
         );
-        // Jika setup berhasil (user tidak menekan 'back')
         if (result == true) {
-          _loadSettings(); // Muat ulang semua settings
+          _loadSettings();
           _showSnackBar('Kunci aplikasi diaktifkan');
         }
       } else {
-        // 2. Jika PIN SUDAH ADA, langsung aktifkan
         await _securityHelper.setLockEnabled(true);
         setState(() {
           _isLockEnabled = true;
@@ -71,7 +66,6 @@ class _SettingsPageState extends State<SettingsPage> {
         _showSnackBar('Kunci aplikasi diaktifkan');
       }
     } else {
-      // Saat MEMATIKAN lock
       await _securityHelper.setLockEnabled(false);
       setState(() {
         _isLockEnabled = false;
@@ -79,7 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _showSnackBar('Kunci aplikasi dinonaktifkan');
     }
   }
-  // Fungsi untuk 'Ubah Passkey'
+
   Future<void> _onChangePasskey() async {
     final result = await Navigator.push<bool>(
       context,
@@ -94,23 +88,19 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  // Fungsi untuk menangani 'Aktifkan/Matikan Notifikasi'
   Future<void> _onNotificationEnabledChanged(bool value) async {
     setState(() {
       _isNotificationEnabled = value;
     });
 
     if (value) {
-      // Notifikasi DIAKTIFKAN
       _showSnackBar('Notifikasi telah diaktifkan');
-      // Tampilkan notifikasi konfirmasi
       await _notificationHelper.showInstantNotification(
         id: DateTime.now().millisecondsSinceEpoch % 100000,
         title: 'Notifikasi Aktif! 🔔',
         body: 'Notifikasi aplikasi telah dinyalakan.',
       );
     } else {
-      // Notifikasi DIMATIKAN
       _showSnackBar('Notifikasi telah dimatikan');
     }
   }
@@ -118,62 +108,158 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengaturan')),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+      backgroundColor: Colors.grey[50],
+      body: Column(
         children: [
-          // BAGIAN KEAMANAN
-          Text(
-            'Keamanan',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Aktifkan Kunci Aplikasi'),
-            value: _isLockEnabled,
-            onChanged: _onLockEnabledChanged,
-          ),          ListTile(
-            title: const Text('Ubah Passkey'),
-            trailing: const Icon(Icons.key),
-            enabled: _isPinSet,
-            onTap: _onChangePasskey,
-          ),
-          const SizedBox(height: 24),
-
-          // BAGIAN NOTIFIKASI
-          Text(
-            'Notifikasi',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          SwitchListTile(
-            title: const Text('Aktifkan Notifikasi'),
-            value: _isNotificationEnabled,
-            onChanged: _onNotificationEnabledChanged,
-          ),
-          const SizedBox(height: 24),
-
-          // BAGIAN TENTANG
-          Text(
-            'Tentang',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          ListTile(
-            title: const Text('Tentang Aplikasi'),
-            subtitle: const Text('Informasi aplikasi dan feedback'),
-            trailing: const Icon(Icons.info_outline),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AboutPage(),
+          // Header
+          Container(
+            color: const Color(0xFFFF6B4A),
+            padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Pengaturan',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-              );
-            },
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                // Card Keamanan
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        child: Text(
+                          'Keamanan',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF6B4A),
+                          ),
+                        ),
+                      ),
+                      SwitchListTile(
+                        title: const Text('Aktifkan Kunci Aplikasi'),
+                        value: _isLockEnabled,
+                        activeColor: const Color(0xFFFF6B4A),
+                        onChanged: _onLockEnabledChanged,
+                      ),
+                      const Divider(height: 1),
+                      ListTile(
+                        title: const Text('Ubah Passkey'),
+                        trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF6B4A)),
+                        enabled: _isPinSet,
+                        onTap: _onChangePasskey,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Card Notifikasi
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        child: Text(
+                          'Notifikasi',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF6B4A),
+                          ),
+                        ),
+                      ),
+                      SwitchListTile(
+                        title: const Text('Aktifkan Notifikasi'),
+                        value: _isNotificationEnabled,
+                        activeColor: const Color(0xFFFF6B4A),
+                        onChanged: _onNotificationEnabledChanged,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Card Tentang
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
+                        child: Text(
+                          'Tentang',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF6B4A),
+                          ),
+                        ),
+                      ),
+                      ListTile(
+                        title: const Text('Tentang Aplikasi'),
+                        subtitle: const Text('Informasi aplikasi dan feedback'),
+                        trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF6B4A)),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AboutPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

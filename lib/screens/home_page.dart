@@ -5,7 +5,6 @@ import 'add_journal_page.dart';
 import 'utilities_page.dart';
 import 'settings_page.dart';
 import 'home_tab_page.dart';
-import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,11 +14,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0; // Indeks tab yang aktif
+  int _selectedIndex = 0;
 
   final GlobalKey<HomeTabPageState> _homeKey = GlobalKey();
 
-  // Daftar halaman/tab kita
   late final List<Widget> _pages;
 
   @override
@@ -32,7 +30,6 @@ class _HomePageState extends State<HomePage> {
     ];
   }
 
-  // Fungsi untuk pindah tab
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -42,41 +39,50 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text(_selectedIndex == 0 ? 'Daftar Jejak' : 'Peta Jejak'),
-      // ),
       body: IndexedStack(index: _selectedIndex, children: _pages),
-
-      // Tombol + (FAB)
-      // floatingActionButton: FloatingActionButton(
-      //   child: const Icon(Icons.add),
-      //   onPressed: () async {
-      //     await Navigator.push(
-      //       context,
-      //       MaterialPageRoute(builder: (context) => const AddJournalPage()),
-      //     );
-
-      //     _listKey.currentState?.refreshJournals();
-      //     _mapKey.currentState?.refreshMarkers();
-      //   },
-      // ),
-
-      // Navigasi Tab di Bawah
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Wajib untuk 3+ item
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calculate),
-            label: 'Utilitas',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFFFF6B4A),
+          unselectedItemColor: Colors.grey,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Pengaturan',
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 12,
           ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+          items: const <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calculate_outlined),
+              activeIcon: Icon(Icons.calculate),
+              label: 'Utilitas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings_outlined),
+              activeIcon: Icon(Icons.settings),
+              label: 'Pengaturan',
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+        ),
       ),
     );
   }
