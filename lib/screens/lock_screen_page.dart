@@ -181,12 +181,15 @@ class _LockScreenPageState extends State<LockScreenPage> {
       }
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Kunci Aplikasi'),
+        backgroundColor: const Color(0xFFFF6B4A),
+        foregroundColor: Colors.white,
+        elevation: 0,
         // Jangan tampilkan tombol back jika sedang buka kunci app
         automaticallyImplyLeading: widget.purpose != LockScreenPurpose.unlockApp,
       ),
@@ -195,14 +198,17 @@ class _LockScreenPageState extends State<LockScreenPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.lock_outline, size: 64, color: Colors.indigo),
-            const SizedBox(height: 24),
+            const Icon(Icons.lock_outline, size: 80, color: Color(0xFFFF6B4A)),
+            const SizedBox(height: 32),
             Text(
               _message,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFFFF6B4A),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 48),
             _buildPinDisplay(),
             const Spacer(),
             _buildNumpad(),
@@ -211,25 +217,34 @@ class _LockScreenPageState extends State<LockScreenPage> {
       ),
     );
   }
-
   Widget _buildPinDisplay() {
     int length = _pinController.text.length;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(4, (index) {
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          width: 20,
-          height: 20,
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          width: 24,
+          height: 24,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: index < length ? Colors.indigo : Colors.grey.shade300,
+            color: index < length 
+              ? const Color(0xFFFF6B4A) 
+              : Colors.grey.shade300,
+            boxShadow: index < length 
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFF6B4A).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
           ),
         );
       }),
     );
   }
-
   Widget _buildNumpad() {
     return GridView.builder(
       shrinkWrap: true,
@@ -237,6 +252,8 @@ class _LockScreenPageState extends State<LockScreenPage> {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         childAspectRatio: 1.5,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
       ),
       itemCount: 12,
       itemBuilder: (context, index) {
@@ -246,28 +263,73 @@ class _LockScreenPageState extends State<LockScreenPage> {
         if (index < 9) { // Tombol 1-9
           text = (index + 1).toString();
           onTap = () => _onNumpadTapped(text);
+          return _buildNumpadButton(text, onTap);
         } else if (index == 9) { // Tombol kosong
-          text = '';
-          onTap = null;
+          return const SizedBox();
         } else if (index == 10) { // Tombol 0
           text = '0';
           onTap = () => _onNumpadTapped(text);
+          return _buildNumpadButton(text, onTap);
         } else { // Tombol backspace
-          // --- MODIFIKASI (sesuai penyesuaian Anda) ---
-          return IconButton(
-            icon: const Icon(Icons.backspace, size: 28),
-            onPressed: _onBackspace,
-          );
+          return _buildBackspaceButton();
         }
-
-        return TextButton(
-          onPressed: onTap,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-        );
       },
+    );
+  }
+
+  Widget _buildNumpadButton(String text, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.grey.shade100,
+            border: Border.all(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFF6B4A),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  Widget _buildBackspaceButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _onBackspace,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.grey.shade100,
+            border: Border.all(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.backspace_outlined,
+              size: 32,
+              color: Color(0xFFFF6B4A),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

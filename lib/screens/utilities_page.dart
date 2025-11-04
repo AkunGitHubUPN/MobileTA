@@ -430,7 +430,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "Jam Dunia (Device)",
+                            "Jam Dunia",
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -443,7 +443,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                       ),
                       const Divider(height: 24),
                       _buildStaticTimeTile(
-                        "Waktu Lokal (HP)",
+                        "Waktu Lokal",
                         _timeFormat.format(_currentTime),
                       ),
                       ..._selectedTimezones.map((key) {

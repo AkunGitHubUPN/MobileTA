@@ -125,12 +125,15 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       );
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Pilih Lokasi'),
+        backgroundColor: const Color(0xFFFF6B4A),
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           // Tombol Confirm
           IconButton(
@@ -172,13 +175,13 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                       width: 80.0,
                       height: 80.0,
                       point: _selectedLocation!,
-                      child: Column(
+                      child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.location_pin,
-                            color: Colors.red,
-                            size: 40,
+                            color: Color(0xFFFF6B4A),
+                            size: 45,
                           ),
                         ],
                       ),
@@ -188,26 +191,30 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             ],
           ),
 
-          // KONTROL ZOOM (Kiri Bawah)
+          // KONTROL ZOOM (Kanan Bawah)
           Positioned(
-            left: 16,
-            bottom: 16,
-            child: Column(
+            right: 16,
+            bottom: 200,
+            child: Row(
               children: [
-                // Tombol Zoom In
-                FloatingActionButton(
-                  mini: true,
-                  backgroundColor: Colors.white,
-                  onPressed: _zoomIn,
-                  child: const Icon(Icons.add, color: Colors.indigo),
-                ),
-                const SizedBox(height: 8),
                 // Tombol Zoom Out
                 FloatingActionButton(
                   mini: true,
-                  backgroundColor: Colors.white,
+                  heroTag: 'zoom_out_location',
+                  backgroundColor: const Color(0xFFFF6B4A),
+                  foregroundColor: Colors.white,
                   onPressed: _zoomOut,
-                  child: const Icon(Icons.remove, color: Colors.indigo),
+                  child: const Icon(Icons.remove),
+                ),
+                const SizedBox(width: 8),
+                // Tombol Zoom In
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'zoom_in_location',
+                  backgroundColor: const Color(0xFFFF6B4A),
+                  foregroundColor: Colors.white,
+                  onPressed: _zoomIn,
+                  child: const Icon(Icons.add),
                 ),
               ],
             ),
@@ -223,13 +230,14 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
                   ),
                 ],
               ),
@@ -237,42 +245,129 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Header dengan icon lokasi
                   Row(
                     children: [
                       if (_isLoadingAddress)
                         const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                              Color(0xFFFF6B4A),
+                            ),
+                          ),
                         )
                       else
                         const Icon(
                           Icons.location_on,
-                          color: Colors.indigo,
-                          size: 20,
+                          color: Color(0xFFFF6B4A),
+                          size: 24,
                         ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          _selectedAddress,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Lokasi Pilihan',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _selectedAddress,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black87,
+                                  ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
+                  // Divider
+                  Divider(
+                    color: Colors.grey[300],
+                    height: 1,
+                  ),
+                  const SizedBox(height: 12),
                   // Koordinat
                   if (_selectedLocation != null)
-                    Text(
-                      'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, '
-                      'Lon: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.my_location,
+                          size: 18,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, '
+                            'Lon: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Klik di peta untuk memilih lokasi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ),
+                  const SizedBox(height: 12),
+                  // Tombol Tetapkan
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Tetapkan Lokasi Ini'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B4A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: _selectedLocation != null
+                          ? _confirmLocation
+                          : null,
+                    ),
+                  ),
                 ],
               ),
             ),

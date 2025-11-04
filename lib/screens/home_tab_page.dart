@@ -294,8 +294,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      // Search bar
+                      const SizedBox(height: 16),                      // Search bar
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -317,17 +316,27 @@ class HomeTabPageState extends State<HomeTabPage> {
                                     },
                                   ),
                                 Container(
-                                  margin: const EdgeInsets.only(right: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
                                   child: IconButton(
                                     icon: Icon(
                                       Icons.tune,
-                                      color: _isFilterActive ? const Color(0xFFFF6B4A) : Colors.grey[700],
+                                      color: _isFilterActive ? const Color(0xFFFF6B4A) : Colors.grey,
                                     ),
                                     onPressed: _showFilterBottomSheet,
+                                  ),
+                                ),
+                                Container(
+                                  child: IconButton(
+                                    icon: const Icon(Icons.refresh, color: Colors.grey),
+                                    onPressed: () {
+                                      _loadData();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Konten direfresh'),
+                                          duration: Duration(milliseconds: 800),
+                                          backgroundColor: Color(0xFFFF6B4A),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
@@ -342,12 +351,12 @@ class HomeTabPageState extends State<HomeTabPage> {
                 ),
                 // Map Section
                 Expanded(
-                  flex: 5,
+                  flex: 6,
                   child: _buildMapSection(),
                 ),
                 // Journal List Section
                 Expanded(
-                  flex: 5,
+                  flex: 4,
                   child: _buildJournalListSection(),
                 ),
               ],
@@ -377,32 +386,42 @@ class HomeTabPageState extends State<HomeTabPage> {
         child: GestureDetector(
           onTap: () {
             _openDetail(journal[DatabaseHelper.columnId]);
-          },
-          child: Stack(
+          },        child: Stack(
             alignment: Alignment.center,
             children: [
-              const Icon(Icons.location_pin, color: Color(0xFFFF6B4A), size: 45),
+              // Angka foto di layer bawah
               if (photoCount > 0)
                 Positioned(
-                  top: 5,
+                  // Sesuaikan nilai bottom dan right untuk mengubah posisi angka
+                  // Nilai negatif = lebih dekat ke dalam (overlap pin)
+                  // Nilai positif = lebih jauh keluar
+                  bottom: 25,
+                  right: 15,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4)
-                        ]),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 4)
+                      ],
+                      border: Border.all(
+                        color: const Color(0xFFFF6B4A),
+                        width: 1,
+                      ),
+                    ),
                     child: Text(
                       '$photoCount',
                       style: const TextStyle(
                         color: Color(0xFFFF6B4A),
                         fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ),
                 ),
+              // Pin di layer atas
+              const Icon(Icons.location_pin, color: Color(0xFFFF6B4A), size: 45),
             ],
           ),
         ),
@@ -478,14 +497,16 @@ class HomeTabPageState extends State<HomeTabPage> {
         return const Center(child: Text("Jurnal tidak ditemukan."));
       }
       return const Center(child: Text("Belum ada jurnal."));
-    }
-
-    return Container(
+    }    return Container(
       color: Colors.grey[100],
       child: ListView.builder(
         padding: const EdgeInsets.all(12.0),
-        itemCount: _filteredJournals.length,
+        itemCount: _filteredJournals.length + 1,
         itemBuilder: (context, index) {
+          // Tambahkan SizedBox di bawah daftar jurnal
+          if (index == _filteredJournals.length) {
+            return const SizedBox(height: 10);
+          }
           final journal = _filteredJournals[index];
           final photoCount = journal['photo_count'];
 

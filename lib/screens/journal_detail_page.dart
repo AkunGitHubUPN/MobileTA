@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../helpers/database_helper.dart';
 import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class JournalDetailPage extends StatefulWidget {
   final int journalId; // Halaman ini harus menerima ID Jurnal
@@ -18,11 +19,12 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
   List<Map<String, dynamic>> _photos = []; // Untuk daftar foto
   bool _isLoading = true;
   bool _isEditMode = false; // Toggle edit mode
-
   // Controllers untuk edit
   late TextEditingController _judulController;
   late TextEditingController _ceritaController;
   List<String> _photosToDelete = []; // Foto yang akan dihapus
+  List<String> _newPhotoPaths = []; // Foto baru yang ditambahkan
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -65,9 +67,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         DatabaseHelper.columnLongitude:
             _journal![DatabaseHelper.columnLongitude],
         DatabaseHelper.columnNamaLokasi: _journal![DatabaseHelper.columnNamaLokasi],
-      };
-
-      await dbHelper.updateJournal(updatedJournal);
+      };      await dbHelper.updateJournal(updatedJournal);
 
       // Hapus foto yang ditandai
       for (String photoPath in _photosToDelete) {
@@ -78,8 +78,20 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         if (photo.isNotEmpty) {
           await dbHelper.deletePhoto(photo[DatabaseHelper.columnPhotoId]);
         }
-      }      // Reload data
+      }
+
+      // Tambahkan foto baru
+      for (String newPhotoPath in _newPhotoPaths) {
+        Map<String, dynamic> photoRow = {
+          DatabaseHelper.columnPhotoJournalId: widget.journalId,
+          DatabaseHelper.columnPhotoPath: newPhotoPath,
+        };
+        await dbHelper.createJournalPhoto(photoRow);
+      }
+
+      // Reload data
       _photosToDelete.clear();
+      _newPhotoPaths.clear();
       _loadJournalData();
       
       setState(() {
@@ -105,7 +117,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       }
     }
   }
-
   void _togglePhotoForDelete(String photoPath) {
     setState(() {
       if (_photosToDelete.contains(photoPath)) {
@@ -114,6 +125,30 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         _photosToDelete.add(photoPath);
       }
     });
+  }
+
+  Future<void> _pickPhotoFromGallery() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _newPhotoPaths.add(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal mengambil gambar: $e"),
+            backgroundColor: const Color(0xFFFF6B4A),
+          ),
+        );
+      }
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -187,21 +222,73 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 30),            // --- GALERI FOTO ---
-            if (_photos.isNotEmpty)
+            if (_photos.isNotEmpty || _newPhotoPaths.isNotEmpty)
               SizedBox(
                 height: 250,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _photos.length,
+                  itemCount: _photos.length + _newPhotoPaths.length + (_isEditMode ? 1 : 0),
                   itemBuilder: (context, index) {
-                    String path =
-                        _photos[index][DatabaseHelper.columnPhotoPath];
+                    // Tombol tambah foto di akhir (hanya saat edit mode)
+                    if (_isEditMode && index == _photos.length + _newPhotoPaths.length) {
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          left: index == 0 ? 16 : 8,
+                          right: 16,
+                        ),
+                        child: GestureDetector(
+                          onTap: _pickPhotoFromGallery,
+                          child: Container(
+                            width: 250,
+                            height: 250,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFFF6B4A),
+                                width: 2,
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.add,
+                                  size: 60,
+                                  color: Color(0xFFFF6B4A),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Tambah Foto',
+                                  style: TextStyle(
+                                    color: Color(0xFFFF6B4A),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Ambil path foto (dari _photos atau _newPhotoPaths)
+                    String path;
+                    bool isNewPhoto = index >= _photos.length;
+                    if (isNewPhoto) {
+                      path = _newPhotoPaths[index - _photos.length];
+                    } else {
+                      path = _photos[index][DatabaseHelper.columnPhotoPath];
+                    }
+
                     bool isMarkedForDelete = _photosToDelete.contains(path);
 
                     return Padding(
                       padding: EdgeInsets.only(
                         left: index == 0 ? 16 : 8,
-                        right: index == _photos.length - 1 ? 16 : 8,
+                        right: index == _photos.length + _newPhotoPaths.length - 1 && !_isEditMode ? 16 : 8,
                       ),
                       child: Stack(
                         children: [
@@ -217,8 +304,8 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               ),
                             ),
                           ),
-                          // Tanda silang saat edit mode
-                          if (_isEditMode)
+                          // Tanda silang saat edit mode (hanya untuk foto lama)
+                          if (_isEditMode && !isNewPhoto)
                             Positioned(
                               top: 8,
                               right: 8,
@@ -242,6 +329,35 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                                     color: isMarkedForDelete
                                         ? Colors.white
                                         : Colors.red,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          // Ikon hapus untuk foto baru
+                          if (_isEditMode && isNewPhoto)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _newPhotoPaths.removeAt(index - _photos.length);
+                                  });
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.8),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.red,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.all(8),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.red,
                                     size: 20,
                                   ),
                                 ),
@@ -387,35 +503,37 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFFF6B4A),
                     ),
-                  ),
-                  const SizedBox(height: 12),                  // CERITA CONTENT
+                  ),                  const SizedBox(height: 12),                  // CERITA CONTENT
                   if (_isEditMode)
-                    TextField(
-                      controller: _ceritaController,
-                      maxLines: 8,
-                      decoration: InputDecoration(
-                        labelText: 'Cerita Perjalanan',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFFF6B4A),
-                            width: 2,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 30),
+                      child: TextField(
+                        controller: _ceritaController,
+                        maxLines: 8,
+                        decoration: InputDecoration(
+                          labelText: 'Cerita Perjalanan',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFF6B4A),
+                              width: 2,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFF6B4A),
+                              width: 2,
+                            ),
                           ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFFF6B4A),
-                            width: 2,
-                          ),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          height: 1.8,
+                          color: Colors.black87,
                         ),
-                      ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        height: 1.8,
-                        color: Colors.black87,
                       ),
                     )
                   else

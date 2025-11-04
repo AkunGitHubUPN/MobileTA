@@ -40,9 +40,8 @@ class MapPageState extends State<MapPage> {
             point: LatLng(
               journal[DatabaseHelper.columnLatitude],
               journal[DatabaseHelper.columnLongitude],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.location_pin, color: Colors.red, size: 35),
+            ),            child: IconButton(
+              icon: const Icon(Icons.location_pin, color: Color(0xFFFF6B4A), size: 35),
               onPressed: () {
                 Navigator.push(
                   context,
