@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -25,8 +26,7 @@ class _AboutPageState extends State<AboutPage> {
       ),
       body: SingleChildScrollView(
         child: Column(
-          children: [
-            // Header dengan background orange
+          children: [            // Header dengan background orange
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -57,17 +57,16 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.travel_explore,
-                        size: 60,
-                        color: Color(0xFFFF6B4A),
+                    child: ClipOval(
+                      child: Image.file(
+                        File('lib/about.jpg'),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'Jejak Pena',
+                    'Muhamad Nobel Wurjayatma',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -76,7 +75,7 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Aplikasi Jurnal Perjalanan',
+                    '124230114',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -198,8 +197,7 @@ class _AboutPageState extends State<AboutPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
+                        const SizedBox(height: 12),                        Text(
                           'Untuk Mata Kuliah: Pemrograman Aplikasi Mobile',
                           style: TextStyle(
                             fontSize: 13,
@@ -209,11 +207,7 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Aplikasi Jejak Pena telah memberikan pengalaman pembelajaran yang sangat berharga dalam mempelajari Flutter dan pengembangan aplikasi mobile. '
-                          'Melalui proyek ini, saya dapat memahami konsep-konsep penting seperti state management, integrasi API, penggunaan database lokal, dan implementasi fitur-fitur modern dalam aplikasi mobile. '
-                          'Fitur-fitur seperti pemetaan lokasi real-time, manajemen foto, dan keamanan aplikasi dengan PIN memperkaya portfolio pengembangan saya. '
-                          'Terima kasih atas kesempatan untuk mengembangkan aplikasi yang praktis dan bermanfaat ini. '
-                          'Saya berharap dapat terus meningkatkan keterampilan pemrograman mobile di masa depan.',
+                          'Matkul Mobile bersama Pak Bagus mudah dan menyenangkan bukan?',
                           style: TextStyle(
                             fontSize: 13,
                             height: 1.8,
