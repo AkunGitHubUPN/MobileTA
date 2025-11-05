@@ -77,7 +77,7 @@ class _HomePageState extends State<HomePage> {
             BottomNavigationBarItem(
               icon: Icon(Icons.settings_outlined),
               activeIcon: Icon(Icons.settings),
-              label: 'Pengaturan',
+              label: 'Settings',
             ),
           ],
           currentIndex: _selectedIndex,

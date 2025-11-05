@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../helpers/database_helper.dart';
 import 'add_journal_page.dart';
@@ -19,6 +18,7 @@ class HomeTabPage extends StatefulWidget {
 class HomeTabPageState extends State<HomeTabPage> {
   final dbHelper = DatabaseHelper.instance;
   final _searchController = TextEditingController();
+  late MapController _mapController;
 
   List<Map<String, dynamic>> _allJournals = [];
   List<Map<String, dynamic>> _filteredJournals = [];
@@ -28,9 +28,9 @@ class HomeTabPageState extends State<HomeTabPage> {
   SortOption _currentSort = SortOption.terbaru;
   bool _filterHanyaFoto = false;
   bool _filterHanyaLokasi = false;
-
-  Stream<LocationMarkerPosition>? _positionStream;
-  bool _isLocationPermissionGranted = false;
+  
+  // Tambahkan variable untuk lokasi user
+  Position? _userPosition;
 
   bool get _isFilterActive =>
       _currentSort != SortOption.terbaru ||
@@ -40,51 +40,17 @@ class HomeTabPageState extends State<HomeTabPage> {
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     _loadData();
     _searchController.addListener(_applySearchAndFilters);
-    _checkLocationPermission();
-  }
-
-  Future<void> _checkLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      setState(() {
-        _isLocationPermissionGranted = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Izin lokasi ditolak. Titik lokasi tidak akan tampil.')));
-      }
-    } else {
-      setState(() {
-        _isLocationPermissionGranted = true;
-        _positionStream = Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
-          ),
-        ).map(
-          (Position position) {
-            return LocationMarkerPosition(
-              latitude: position.latitude,
-              longitude: position.longitude,
-              accuracy: position.accuracy,
-            );
-          },
-        );
-      });
-    }
+    _getUserLocation(); // Tambahkan ini
   }
 
   @override
   void dispose() {
     _searchController.removeListener(_applySearchAndFilters);
     _searchController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -92,15 +58,29 @@ class HomeTabPageState extends State<HomeTabPage> {
     setState(() {
       _isLoading = true;
     });
-    final data = await dbHelper.getAllJournalsWithPhotoCount();
-    setState(() {
-      _allJournals = data;
-      _currentSort = SortOption.terbaru;
-      _filterHanyaFoto = false;
-      _filterHanyaLokasi = false;
-      _isLoading = false;
-    });
-    _applySearchAndFilters();
+    
+    try {
+      final data = await dbHelper.getAllJournalsWithPhotoCount();
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _allJournals = data;
+        _currentSort = SortOption.terbaru;
+        _filterHanyaFoto = false;
+        _filterHanyaLokasi = false;
+        _isLoading = false;
+      });
+      
+      _applySearchAndFilters();
+    } catch (e) {
+      print('Error loading data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _applySearchAndFilters() {
@@ -137,12 +117,16 @@ class HomeTabPageState extends State<HomeTabPage> {
   }
 
   Future<void> _onAddJournal() async {
-    await Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddJournalPage()),
     );
-    _loadData();
-    _searchController.clear();
+    
+    // Setelah kembali dari AddJournalPage
+    if (mounted) {
+      _loadData();
+      _searchController.clear();
+    }
   }
 
   void _openDetail(int journalId) {
@@ -269,6 +253,39 @@ class HomeTabPageState extends State<HomeTabPage> {
     );
   }
 
+  // Tambahkan method untuk mendapatkan lokasi user
+  Future<void> _getUserLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || 
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+      
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _userPosition = position;
+        });
+      }
+    } catch (e) {
+      print('Error getting user location: $e');
+    }
+  }
+
+  // Tambahkan method untuk center map ke lokasi user
+  void _centerToUserLocation() {
+    if (_userPosition != null) {
+      _mapController.move(
+        LatLng(_userPosition!.latitude, _userPosition!.longitude),
+        _mapController.camera.zoom,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -386,15 +403,13 @@ class HomeTabPageState extends State<HomeTabPage> {
         child: GestureDetector(
           onTap: () {
             _openDetail(journal[DatabaseHelper.columnId]);
-          },        child: Stack(
+          },
+          child: Stack(
             alignment: Alignment.center,
             children: [
               // Angka foto di layer bawah
               if (photoCount > 0)
                 Positioned(
-                  // Sesuaikan nilai bottom dan right untuk mengubah posisi angka
-                  // Nilai negatif = lebih dekat ke dalam (overlap pin)
-                  // Nilai positif = lebih jauh keluar
                   bottom: 25,
                   right: 15,
                   child: Container(
@@ -428,12 +443,42 @@ class HomeTabPageState extends State<HomeTabPage> {
       );
     }).whereType<Marker>().toList();
 
-    final mapController = MapController();
+    // Tambahkan marker untuk user location
+    if (_userPosition != null) {
+      markers.add(
+        Marker(
+          width: 30.0,
+          height: 30.0,
+          point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF6B4A).withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: const Color(0xFFFF6B4A),
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF6B4A),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
+    // Gunakan _mapController yang sudah ada (bukan membuat baru)
     return Stack(
       children: [
         FlutterMap(
-          mapController: mapController,
+          mapController: _mapController,
           options: const MapOptions(
             initialCenter: LatLng(-2.5489, 118.0149),
             initialZoom: 5.0,
@@ -446,10 +491,6 @@ class HomeTabPageState extends State<HomeTabPage> {
               subdomains: const ['a', 'b', 'c'],
             ),
             MarkerLayer(markers: markers),
-            if (_isLocationPermissionGranted && _positionStream != null)
-              CurrentLocationLayer(
-                positionStream: _positionStream!,
-              ),
           ],
         ),
         Positioned(
@@ -457,15 +498,30 @@ class HomeTabPageState extends State<HomeTabPage> {
           bottom: 16,
           child: Column(
             children: [
+              // Tambahkan tombol center to user location
+              FloatingActionButton(
+                mini: true,
+                heroTag: 'center_location',
+                backgroundColor: Colors.white,
+                elevation: 4,
+                onPressed: _userPosition != null ? _centerToUserLocation : null,
+                child: Icon(
+                  Icons.my_location,
+                  color: _userPosition != null 
+                      ? const Color(0xFFFF6B4A) 
+                      : Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
               FloatingActionButton(
                 mini: true,
                 heroTag: 'zoom_in',
                 backgroundColor: Colors.white,
                 elevation: 4,
                 onPressed: () {
-                  mapController.move(
-                    mapController.camera.center,
-                    mapController.camera.zoom + 1,
+                  _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom + 1,
                   );
                 },
                 child: const Icon(Icons.add, color: Color(0xFFFF6B4A)),
@@ -477,9 +533,9 @@ class HomeTabPageState extends State<HomeTabPage> {
                 backgroundColor: Colors.white,
                 elevation: 4,
                 onPressed: () {
-                  mapController.move(
-                    mapController.camera.center,
-                    mapController.camera.zoom - 1,
+                  _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom - 1,
                   );
                 },
                 child: const Icon(Icons.remove, color: Color(0xFFFF6B4A)),

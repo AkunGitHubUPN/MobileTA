@@ -118,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Pengaturan',
+                'Settings',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,

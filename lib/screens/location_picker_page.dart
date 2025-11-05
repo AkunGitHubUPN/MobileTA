@@ -22,6 +22,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   LatLng? _selectedLocation;
   String _selectedAddress = "Pilih lokasi di peta";
   bool _isLoadingAddress = false;
+  Position? _userPosition; // Tambahkan ini
 
   @override
   void initState() {
@@ -35,6 +36,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         widget.initialPosition!.longitude,
       );
     }
+    
+    _getUserLocation(); // Tambahkan ini
   }
 
   @override
@@ -79,6 +82,39 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         _selectedAddress = 'Error: ${e.toString()}';
         _isLoadingAddress = false;
       });
+    }
+  }
+
+  // Tambahkan method untuk mendapatkan lokasi user
+  Future<void> _getUserLocation() async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || 
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+      
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _userPosition = position;
+        });
+      }
+    } catch (e) {
+      print('Error getting user location: $e');
+    }
+  }
+
+  // Tambahkan method untuk center ke user location
+  void _centerToUserLocation() {
+    if (_userPosition != null) {
+      _mapController.move(
+        LatLng(_userPosition!.latitude, _userPosition!.longitude),
+        _mapController.camera.zoom,
+      );
     }
   }
 
@@ -168,9 +204,37 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 subdomains: const ['a', 'b', 'c'],
               ),
               // Layer 2: Marker untuk lokasi yang dipilih
-              if (_selectedLocation != null)
-                MarkerLayer(
-                  markers: [
+              MarkerLayer(
+                markers: [
+                  // User current location
+                  if (_userPosition != null)
+                    Marker(
+                      width: 30.0,
+                      height: 30.0,
+                      point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B4A).withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFFF6B4A),
+                            width: 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF6B4A),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Selected location
+                  if (_selectedLocation != null)
                     Marker(
                       width: 80.0,
                       height: 80.0,
@@ -186,8 +250,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                         ],
                       ),
                     ),
-                  ],
-                ),
+                ],
+              ),
             ],
           ),
 
@@ -195,18 +259,21 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           Positioned(
             right: 16,
             bottom: 200,
-            child: Row(
+            child: Column(
               children: [
-                // Tombol Zoom Out
+                // Tombol Center to User Location
                 FloatingActionButton(
                   mini: true,
-                  heroTag: 'zoom_out_location',
+                  heroTag: 'center_location_picker',
                   backgroundColor: const Color(0xFFFF6B4A),
                   foregroundColor: Colors.white,
-                  onPressed: _zoomOut,
-                  child: const Icon(Icons.remove),
+                  onPressed: _userPosition != null ? _centerToUserLocation : null,
+                  child: Icon(
+                    Icons.my_location,
+                    color: _userPosition != null ? Colors.white : Colors.grey,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 8),
                 // Tombol Zoom In
                 FloatingActionButton(
                   mini: true,
@@ -215,6 +282,16 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   foregroundColor: Colors.white,
                   onPressed: _zoomIn,
                   child: const Icon(Icons.add),
+                ),
+                const SizedBox(height: 8),
+                // Tombol Zoom Out
+                FloatingActionButton(
+                  mini: true,
+                  heroTag: 'zoom_out_location',
+                  backgroundColor: const Color(0xFFFF6B4A),
+                  foregroundColor: Colors.white,
+                  onPressed: _zoomOut,
+                  child: const Icon(Icons.remove),
                 ),
               ],
             ),
