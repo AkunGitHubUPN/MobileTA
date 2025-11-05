@@ -21,12 +21,16 @@ class _AboutPageState extends State<AboutPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFFF6B4A),
         foregroundColor: Colors.white,
-        title: const Text('Tentang Aplikasi', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Tentang Aplikasi',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
-          children: [            // Header dengan background orange
+          children: [
+            // Header dengan background orange
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -45,10 +49,7 @@ class _AboutPageState extends State<AboutPage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 4,
-                      ),
+                      border: Border.all(color: Colors.white, width: 4),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
@@ -57,16 +58,17 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                       ],
                     ),
-                    child: ClipOval(
-                      child: Image.file(
-                        File('lib/about.jpg'),
-                        fit: BoxFit.cover,
+                    child: const Center(
+                      child: Icon(
+                        Icons.travel_explore,
+                        size: 60,
+                        color: Color(0xFFFF6B4A),
                       ),
                     ),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'Muhamad Nobel Wurjayatma',
+                    'JejakPena',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -75,11 +77,8 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    '124230114',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
+                    'Buku Diary Digital Traveler',
+                    style: TextStyle(fontSize: 16, color: Colors.white70),
                   ),
                 ],
               ),
@@ -92,7 +91,7 @@ class _AboutPageState extends State<AboutPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Card Tentang Aplikasi
                   Container(
                     width: double.infinity,
@@ -138,18 +137,135 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Jejak Pena adalah aplikasi untuk mencatat dan membagikan pengalaman perjalanan Anda. '
-                          'Dengan fitur lokasi, foto, dan peta interaktif, Anda dapat menyimpan setiap momen berharga dari perjalanan Anda.',
+                          "JejakPena adalah buku diary digital pribadi yang mengubah setiap langkah menjadi cerita abadi. Membuat setiap jejak petualangan terbentang di seluruh dunia, tersimpan aman, dan berfungsi penuh selamanya.",
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.6,
                             color: Colors.black87,
                           ),
+                          textAlign: TextAlign.justify,
                         ),
                       ],
                     ),
                   ),
-                  
+
+                  const SizedBox(height: 24),
+
+                  // Card Author
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.person_outline,
+                                color: Color(0xFFFF6B4A),
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Author',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFF6B4A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // Foto Author
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFF6B4A),
+                              width: 3,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/about.JPG',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Color(0xFFFF6B4A),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Muhamad Nobel Wurjayatma',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF6B4A).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFFF6B4A).withOpacity(0.3),
+                            ),
+                          ),
+                          child: const Text(
+                            '124230114',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFFFF6B4A),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
 
                   // Card Saran dan Kesan
@@ -197,7 +313,8 @@ class _AboutPageState extends State<AboutPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),                        Text(
+                        const SizedBox(height: 12),
+                        Text(
                           'Untuk Mata Kuliah: Pemrograman Aplikasi Mobile',
                           style: TextStyle(
                             fontSize: 13,
@@ -251,7 +368,7 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '© 2025 Jejak Pena. All rights reserved.',
+                          '© 2025 JejakPena. All rights reserved.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -261,7 +378,7 @@ class _AboutPageState extends State<AboutPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
