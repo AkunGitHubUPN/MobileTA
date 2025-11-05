@@ -28,7 +28,7 @@ class HomeTabPageState extends State<HomeTabPage> {
   SortOption _currentSort = SortOption.terbaru;
   bool _filterHanyaFoto = false;
   bool _filterHanyaLokasi = false;
-  
+
   // Tambahkan variable untuk lokasi user
   Position? _userPosition;
 
@@ -58,12 +58,12 @@ class HomeTabPageState extends State<HomeTabPage> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final data = await dbHelper.getAllJournalsWithPhotoCount();
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _allJournals = data;
         _currentSort = SortOption.terbaru;
@@ -71,7 +71,7 @@ class HomeTabPageState extends State<HomeTabPage> {
         _filterHanyaLokasi = false;
         _isLoading = false;
       });
-      
+
       _applySearchAndFilters();
     } catch (e) {
       print('Error loading data: $e');
@@ -105,8 +105,9 @@ class HomeTabPageState extends State<HomeTabPage> {
     final query = _searchController.text.toLowerCase();
     if (query.isNotEmpty) {
       tempJournals = tempJournals.where((journal) {
-        final title =
-            journal[DatabaseHelper.columnJudul].toString().toLowerCase();
+        final title = journal[DatabaseHelper.columnJudul]
+            .toString()
+            .toLowerCase();
         return title.contains(query);
       }).toList();
     }
@@ -121,7 +122,7 @@ class HomeTabPageState extends State<HomeTabPage> {
       context,
       MaterialPageRoute(builder: (context) => const AddJournalPage()),
     );
-    
+
     // Setelah kembali dari AddJournalPage
     if (mounted) {
       _loadData();
@@ -257,15 +258,15 @@ class HomeTabPageState extends State<HomeTabPage> {
   Future<void> _getUserLocation() async {
     try {
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied || 
+      if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         return;
       }
-      
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       if (mounted) {
         setState(() {
           _userPosition = position;
@@ -291,9 +292,9 @@ class HomeTabPageState extends State<HomeTabPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(
-              color: Color(0xFFFF6B4A),
-            ))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B4A)),
+            )
           : Column(
               children: [
                 // Header dengan judul
@@ -311,7 +312,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 16),                      // Search bar
+                      const SizedBox(height: 16), // Search bar
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -321,7 +322,10 @@ class HomeTabPageState extends State<HomeTabPage> {
                           controller: _searchController,
                           decoration: InputDecoration(
                             hintText: 'Cari Jurnal...',
-                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: Colors.grey,
+                            ),
                             suffixIcon: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -336,17 +340,24 @@ class HomeTabPageState extends State<HomeTabPage> {
                                   child: IconButton(
                                     icon: Icon(
                                       Icons.tune,
-                                      color: _isFilterActive ? const Color(0xFFFF6B4A) : Colors.grey,
+                                      color: _isFilterActive
+                                          ? const Color(0xFFFF6B4A)
+                                          : Colors.grey,
                                     ),
                                     onPressed: _showFilterBottomSheet,
                                   ),
                                 ),
                                 Container(
                                   child: IconButton(
-                                    icon: const Icon(Icons.refresh, color: Colors.grey),
+                                    icon: const Icon(
+                                      Icons.refresh,
+                                      color: Colors.grey,
+                                    ),
                                     onPressed: () {
                                       _loadData();
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         const SnackBar(
                                           content: Text('Konten direfresh'),
                                           duration: Duration(milliseconds: 800),
@@ -359,7 +370,9 @@ class HomeTabPageState extends State<HomeTabPage> {
                               ],
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                           ),
                         ),
                       ),
@@ -367,15 +380,9 @@ class HomeTabPageState extends State<HomeTabPage> {
                   ),
                 ),
                 // Map Section
-                Expanded(
-                  flex: 6,
-                  child: _buildMapSection(),
-                ),
+                Expanded(flex: 6, child: _buildMapSection()),
                 // Journal List Section
-                Expanded(
-                  flex: 4,
-                  child: _buildJournalListSection(),
-                ),
+                Expanded(flex: 4, child: _buildJournalListSection()),
               ],
             ),
       floatingActionButton: FloatingActionButton(
@@ -387,77 +394,20 @@ class HomeTabPageState extends State<HomeTabPage> {
   }
 
   Widget _buildMapSection() {
-    List<Marker> markers = _filteredJournals.map((journal) {
-      if (journal[DatabaseHelper.columnLatitude] == null) {
-        return null;
-      }
-      int photoCount = journal['photo_count'];
+    List<Marker> markers = [];
 
-      return Marker(
-        width: 80.0,
-        height: 80.0,
-        point: LatLng(
-          journal[DatabaseHelper.columnLatitude],
-          journal[DatabaseHelper.columnLongitude],
-        ),
-        child: GestureDetector(
-          onTap: () {
-            _openDetail(journal[DatabaseHelper.columnId]);
-          },
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Angka foto di layer bawah
-              if (photoCount > 0)
-                Positioned(
-                  bottom: 25,
-                  right: 15,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 4)
-                      ],
-                      border: Border.all(
-                        color: const Color(0xFFFF6B4A),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      '$photoCount',
-                      style: const TextStyle(
-                        color: Color(0xFFFF6B4A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                ),
-              // Pin di layer atas
-              const Icon(Icons.location_pin, color: Color(0xFFFF6B4A), size: 45),
-            ],
-          ),
-        ),
-      );
-    }).whereType<Marker>().toList();
-
-    // Tambahkan marker untuk user location
+    // Tambahkan marker untuk user location terlebih dahulu (layer bawah)
     if (_userPosition != null) {
       markers.add(
         Marker(
-          width: 30.0,
-          height: 30.0,
+          width: 40.0,
+          height: 40.0,
           point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
           child: Container(
             decoration: BoxDecoration(
               color: const Color(0xFFFF6B4A).withOpacity(0.2),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFFF6B4A),
-                width: 1,
-              ),
+              border: Border.all(color: const Color(0xFFFF6B4A), width: 0.5),
             ),
             child: Center(
               child: Container(
@@ -474,7 +424,76 @@ class HomeTabPageState extends State<HomeTabPage> {
       );
     }
 
-    // Gunakan _mapController yang sudah ada (bukan membuat baru)
+    // Tambahkan marker jurnal dari database (layer atas)
+    final journalMarkers = _filteredJournals
+        .map((journal) {
+          if (journal[DatabaseHelper.columnLatitude] == null) {
+            return null;
+          }
+          int photoCount = journal['photo_count'];
+
+          return Marker(
+            width: 80.0,
+            height: 80.0,
+            point: LatLng(
+              journal[DatabaseHelper.columnLatitude],
+              journal[DatabaseHelper.columnLongitude],
+            ),
+            child: Transform.translate(
+              offset: const Offset(0, -20),
+              child: GestureDetector(
+                onTap: () {
+                  _openDetail(journal[DatabaseHelper.columnId]);
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (photoCount > 0)
+                      Positioned(
+                        bottom: 25,
+                        right: 15,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFFFF6B4A),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '$photoCount',
+                            style: const TextStyle(
+                              color: Color(0xFFFF6B4A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
+                    const Icon(
+                      Icons.location_pin,
+                      color: Color(0xFFFF6B4A),
+                      size: 45,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        })
+        .whereType<Marker>()
+        .toList();
+
+    markers.addAll(journalMarkers);
+
     return Stack(
       children: [
         FlutterMap(
@@ -498,7 +517,6 @@ class HomeTabPageState extends State<HomeTabPage> {
           bottom: 16,
           child: Column(
             children: [
-              // Tambahkan tombol center to user location
               FloatingActionButton(
                 mini: true,
                 heroTag: 'center_location',
@@ -507,8 +525,8 @@ class HomeTabPageState extends State<HomeTabPage> {
                 onPressed: _userPosition != null ? _centerToUserLocation : null,
                 child: Icon(
                   Icons.my_location,
-                  color: _userPosition != null 
-                      ? const Color(0xFFFF6B4A) 
+                  color: _userPosition != null
+                      ? const Color(0xFFFF6B4A)
                       : Colors.grey,
                 ),
               ),
@@ -553,7 +571,8 @@ class HomeTabPageState extends State<HomeTabPage> {
         return const Center(child: Text("Jurnal tidak ditemukan."));
       }
       return const Center(child: Text("Belum ada jurnal."));
-    }    return Container(
+    }
+    return Container(
       color: Colors.grey[100],
       child: ListView.builder(
         padding: const EdgeInsets.all(12.0),
@@ -567,7 +586,8 @@ class HomeTabPageState extends State<HomeTabPage> {
           final photoCount = journal['photo_count'];
 
           String locationName =
-              journal[DatabaseHelper.columnNamaLokasi] ?? "Lokasi Tidak Diketahui";
+              journal[DatabaseHelper.columnNamaLokasi] ??
+              "Lokasi Tidak Diketahui";
           List<String> parts = locationName.split(',');
           if (parts.length >= 3) {
             locationName =
@@ -588,7 +608,10 @@ class HomeTabPageState extends State<HomeTabPage> {
               ],
             ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
               title: Text(
                 journal[DatabaseHelper.columnJudul],
                 style: const TextStyle(
@@ -600,14 +623,14 @@ class HomeTabPageState extends State<HomeTabPage> {
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
                   "${journal[DatabaseHelper.columnTanggal].substring(0, 10)}\n$locationName",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                 ),
               ),
               trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF6B4A).withOpacity(0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -615,15 +638,19 @@ class HomeTabPageState extends State<HomeTabPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.photo_library,
-                        color: Color(0xFFFF6B4A), size: 18),
+                    const Icon(
+                      Icons.photo_library,
+                      color: Color(0xFFFF6B4A),
+                      size: 18,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '$photoCount',
                       style: const TextStyle(
-                          color: Color(0xFFFF6B4A), 
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16),
+                        color: Color(0xFFFF6B4A),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),

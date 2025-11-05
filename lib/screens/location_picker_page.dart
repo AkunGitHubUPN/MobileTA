@@ -7,11 +7,8 @@ import 'package:http/http.dart' as http;
 
 class LocationPickerPage extends StatefulWidget {
   final Position? initialPosition;
-  
-  const LocationPickerPage({
-    super.key,
-    this.initialPosition,
-  });
+
+  const LocationPickerPage({super.key, this.initialPosition});
 
   @override
   State<LocationPickerPage> createState() => _LocationPickerPageState();
@@ -28,7 +25,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    
+
     // Jika ada initial position, set itu sebagai lokasi awal
     if (widget.initialPosition != null) {
       _selectedLocation = LatLng(
@@ -36,7 +33,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         widget.initialPosition!.longitude,
       );
     }
-    
+
     _getUserLocation(); // Tambahkan ini
   }
 
@@ -60,9 +57,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
       final response = await http.get(
         url,
-        headers: {
-          'User-Agent': 'jejak_pena_app',
-        },
+        headers: {'User-Agent': 'jejak_pena_app'},
       );
 
       if (response.statusCode == 200) {
@@ -89,15 +84,15 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   Future<void> _getUserLocation() async {
     try {
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied || 
+      if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
         return;
       }
-      
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       if (mounted) {
         setState(() {
           _userPosition = position;
@@ -161,6 +156,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       );
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -171,7 +167,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // Tombol Confirm
           IconButton(
             icon: const Icon(Icons.check),
             tooltip: 'Tetapkan Lokasi',
@@ -185,12 +180,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _selectedLocation ?? const LatLng(-2.5489, 118.0149),
+              initialCenter:
+                  _selectedLocation ?? const LatLng(-2.5489, 118.0149),
               initialZoom: 5.0,
               minZoom: 3.0,
               maxZoom: 18.0,
               onTap: (tapPosition, point) {
-                // User klik di peta untuk memilih lokasi
                 setState(() {
                   _selectedLocation = point;
                 });
@@ -200,25 +195,29 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             children: [
               // Layer 1: Tile Layer
               TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                 subdomains: const ['a', 'b', 'c'],
               ),
-              // Layer 2: Marker untuk lokasi yang dipilih
+              // Layer 2: Markers
               MarkerLayer(
                 markers: [
                   // User current location
                   if (_userPosition != null)
                     Marker(
-                      width: 30.0,
-                      height: 30.0,
-                      point: LatLng(_userPosition!.latitude, _userPosition!.longitude),
+                      width: 40.0,
+                      height: 40.0,
+                      point: LatLng(
+                        _userPosition!.latitude,
+                        _userPosition!.longitude,
+                      ),
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFFF6B4A).withOpacity(0.2),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: const Color(0xFFFF6B4A),
-                            width: 1,
+                            width: 0.5,
                           ),
                         ),
                         child: Center(
@@ -239,15 +238,21 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                       width: 80.0,
                       height: 80.0,
                       point: _selectedLocation!,
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
+                      child: Transform.translate(
+                        offset: const Offset(
+                          0,
+                          -20,
+                        ), // Geser ke atas setengah tinggi marker
+                        child: GestureDetector(
+                          onTap: () {
+                            _confirmLocation();
+                          },
+                          child: const Icon(
                             Icons.location_pin,
                             color: Color(0xFFFF6B4A),
                             size: 45,
                           ),
-                        ],
+                        ),
                       ),
                     ),
                 ],
@@ -267,7 +272,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   heroTag: 'center_location_picker',
                   backgroundColor: const Color(0xFFFF6B4A),
                   foregroundColor: Colors.white,
-                  onPressed: _userPosition != null ? _centerToUserLocation : null,
+                  onPressed: _userPosition != null
+                      ? _centerToUserLocation
+                      : null,
                   child: Icon(
                     Icons.my_location,
                     color: _userPosition != null ? Colors.white : Colors.grey,
@@ -297,152 +304,94 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             ),
           ),
 
-          // INFO LOKASI (Bawah Center)
+          // INFO LOKASI (Bottom Section)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
-                    blurRadius: 12,
+                    blurRadius: 8,
                     offset: const Offset(0, -2),
                   ),
                 ],
               ),
+              padding: const EdgeInsets.all(20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header dengan icon lokasi
                   Row(
                     children: [
-                      if (_isLoadingAddress)
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(
-                              Color(0xFFFF6B4A),
-                            ),
-                          ),
-                        )
-                      else
-                        const Icon(
-                          Icons.location_on,
-                          color: Color(0xFFFF6B4A),
-                          size: 24,
-                        ),
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFFFF6B4A),
+                        size: 24,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Lokasi Pilihan',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                            const Text(
+                              'Lokasi Terpilih',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              _selectedAddress,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black87,
+                            if (_isLoadingAddress)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFFFF6B4A),
                                   ),
-                            ),
+                                ),
+                              )
+                            else
+                              Text(
+                                _selectedAddress,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Divider
-                  Divider(
-                    color: Colors.grey[300],
-                    height: 1,
-                  ),
-                  const SizedBox(height: 12),
-                  // Koordinat
-                  if (_selectedLocation != null)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.my_location,
-                          size: 18,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Lat: ${_selectedLocation!.latitude.toStringAsFixed(6)}, '
-                            'Lon: ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Klik di peta untuk memilih lokasi',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 12),
-                  // Tombol Tetapkan
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle),
-                      label: const Text('Tetapkan Lokasi Ini'),
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6B4A),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        elevation: 0,
                       ),
-                      onPressed: _selectedLocation != null
-                          ? _confirmLocation
-                          : null,
+                      onPressed: _confirmLocation,
+                      child: const Text(
+                        'Tetapkan Lokasi Ini',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
