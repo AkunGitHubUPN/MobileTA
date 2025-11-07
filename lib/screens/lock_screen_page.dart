@@ -1,37 +1,31 @@
-// Lokasi: lib/screens/lock_screen_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:jejak_pena/helpers/security_helper.dart';
-import 'package:jejak_pena/screens/home_page.dart';
+import '../helpers/security_helper.dart';
+import '../helpers/database_helper.dart';
+import '../helpers/user_session.dart';
+import 'home_page.dart';
 
-// --- MODIFIKASI ---
-// Enum untuk membedakan mode halaman
 enum LockScreenMode { unlock, setPin, confirmPin }
-
-// Enum untuk membedakan tujuan halaman ini dibuka
 enum LockScreenPurpose { unlockApp, setupPin, changePin }
 
 class LockScreenPage extends StatefulWidget {
-  // --- MODIFIKASI ---
-  // Kita tambahkan 'purpose' agar halaman ini tahu tujuannya
   final LockScreenPurpose purpose;
 
   const LockScreenPage({
     super.key,
-    this.purpose = LockScreenPurpose.unlockApp, // Default-nya adalah buka kunci
+    this.purpose = LockScreenPurpose.unlockApp,
   });
-
   @override
   State<LockScreenPage> createState() => _LockScreenPageState();
 }
 
 class _LockScreenPageState extends State<LockScreenPage> {
   final _pinController = TextEditingController();
-  final _securityHelper = SecurityHelper();
+  final _securityHelper = SecurityHelper.instance;
 
-  String _message = 'Masukkan Passkey Anda';
+  String _message = 'Masukkan Passkey';
   String _tempPin = '';
   LockScreenMode _mode = LockScreenMode.unlock;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -39,11 +33,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     _determineInitialMode();
   }
 
-  // --- MODIFIKASI ---
-  // Cek mode berdasarkan 'purpose'
-  Future<void> _determineInitialMode() async {
-    final isPinSet = await _securityHelper.isPinSet();
-
+  void _determineInitialMode() {
     setState(() {
       switch (widget.purpose) {
         case LockScreenPurpose.unlockApp:
@@ -51,282 +41,259 @@ class _LockScreenPageState extends State<LockScreenPage> {
           _message = 'Masukkan Passkey Anda';
           break;
         case LockScreenPurpose.setupPin:
+        case LockScreenPurpose.changePin: 
           _mode = LockScreenMode.setPin;
-          _message = 'Buat Passkey Baru (4 digit)';
-          break;
-        case LockScreenPurpose.changePin:
-          if (isPinSet) {
-            _mode = LockScreenMode.unlock;
-            _message = 'Masukkan Passkey LAMA Anda';
-          } else {
-            // Jika tidak ada PIN, ganti jadi 'setupPin'
-            _mode = LockScreenMode.setPin;
-            _message = 'Buat Passkey Baru (4 digit)';
-          }
+          _message = 'Buat Passkey Baru';
           break;
       }
     });
   }
 
-  // Dipanggil saat tombol numpad ditekan
   void _onNumpadTapped(String value) {
     if (_pinController.text.length >= 4) return;
-
-    setState(() {
-      _pinController.text += value;
-    });
-
-    // Jika 4 digit sudah dimasukkan, proses PIN
-    if (_pinController.text.length == 4) {
-      _processPin();
-    }
+    setState(() => _pinController.text += value);
+    if (_pinController.text.length == 4) _processPin();
   }
 
-  // Dipanggil saat tombol backspace ditekan
   void _onBackspace() {
     if (_pinController.text.isEmpty) return;
-    setState(() {
-      _pinController.text =
-          _pinController.text.substring(0, _pinController.text.length - 1);
-    });
+    setState(() => _pinController.text = _pinController.text.substring(0, _pinController.text.length - 1));
   }
 
-  // --- MODIFIKASI ---
-  // Logika utama untuk memproses PIN, sekarang lebih kompleks
   Future<void> _processPin() async {
+    if (_isLoading) return;
     final enteredPin = _pinController.text;
-    await Future.delayed(const Duration(milliseconds: 200));
+    setState(() => _isLoading = true);
+    
+    await Future.delayed(const Duration(milliseconds: 300));
 
-    switch (_mode) {
-      // --- KASUS: BUKA KUNCI / MASUKKAN PIN LAMA ---
-      case LockScreenMode.unlock:
-        final correctPin = await _securityHelper.getPin();
-        if (enteredPin == correctPin) {
-          // --- PIN LAMA BENAR ---
-          if (widget.purpose == LockScreenPurpose.unlockApp) {
-            // TUJUAN: Buka App -> Arahkan ke Home
+    try {
+      switch (_mode) {
+        case LockScreenMode.unlock:
+          final correctPin = await _securityHelper.getPin();
+          if (enteredPin == correctPin) {
             if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePage()),
+               Navigator.pushReplacement(
+                context, 
+                MaterialPageRoute(builder: (context) => const HomePage())
               );
             }
-          } else if (widget.purpose == LockScreenPurpose.changePin) {
-            // TUJUAN: Ganti Pin -> Lanjut ke set PIN baru
+          } else {
+            _showError('Passkey salah');
+          }
+          break;
+
+        case LockScreenMode.setPin:
+          setState(() {
+            _tempPin = enteredPin;
+            _mode = LockScreenMode.confirmPin;
+            _message = 'Konfirmasi Passkey Baru';
+            _pinController.clear();
+            _isLoading = false;
+          });
+          break;
+
+        case LockScreenMode.confirmPin:
+          if (enteredPin == _tempPin) {
+            await _securityHelper.setPin(enteredPin);
+            
+            if (widget.purpose == LockScreenPurpose.setupPin) {
+              await _securityHelper.setLockEnabled(true);
+            }
+            
+            if (mounted) {
+              Navigator.pop(context, true);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Passkey berhasil disimpan'), 
+                  backgroundColor: Color(0xFFFF6B4A)
+                ),
+              );
+            }
+          } else {
             setState(() {
               _mode = LockScreenMode.setPin;
-              _message = 'Masukkan Passkey BARU Anda';
+              _message = 'Passkey tidak cocok. Ulangi baru.';
               _pinController.clear();
+              _isLoading = false;
             });
           }
-        } else {
-          // SALAH: Tampilkan error dan reset
-          _showError('Passkey salah. Coba lagi.');
-        }
-        break;
-
-      // --- KASUS: BUAT PIN BARU ---
-      case LockScreenMode.setPin:
-        _tempPin = enteredPin;
-        setState(() {
-          _mode = LockScreenMode.confirmPin;
-          _message = 'Konfirmasi Passkey Baru Anda';
-          _pinController.clear();
-        });
-        break;
-
-      // --- KASUS: KONFIRMASI PIN ---
-      case LockScreenMode.confirmPin:
-        if (enteredPin == _tempPin) {
-          // --- PIN BARU COCOK ---
-          await _securityHelper.setPin(enteredPin);
-          
-          if (widget.purpose == LockScreenPurpose.setupPin) {
-            // Jika ini setup awal, aktifkan lock-nya
-            await _securityHelper.setLockEnabled(true);
-          }
-          _showSuccessAndExit();
-
-        } else {
-          // SALAH: Ulangi dari awal (tergantung tujuan)
-          setState(() {
-            _mode = LockScreenMode.setPin;
-             _message = (widget.purpose == LockScreenPurpose.changePin)
-                ? 'Passkey tidak cocok. Masukkan Passkey BARU lagi.'
-                : 'Passkey tidak cocok. Silakan buat ulang.';
-          });
-          _showError(_message);
-        }
-        break;
+          break;
+      }
+    } catch (e) {
+      _showError("Terjadi kesalahan: $e");
     }
   }
 
-  void _showError(String message) {
+  void _showError(String msg) {
+    if (!mounted) return;
     setState(() {
-      _message = message;
+      _message = msg;
       _pinController.clear();
+      _isLoading = false;
     });
   }
 
-  void _showSuccessAndExit() {
-    setState(() {
-      _message = 'Passkey Disimpan!';
-      _pinController.clear();
-    });
-    // Kembali ke halaman Settings
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        // Kirim 'true' untuk update settings page
-        Navigator.pop(context, true); 
-      }
-    });
+  void _showForgotPinDialog() {
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Lupa Passkey?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Masuk dengan akun Anda untuk mereset passkey.'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+                ),
+                if (isVerifying)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16.0),
+                    child: CircularProgressIndicator(color: Color(0xFFFF6B4A)),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isVerifying ? null : () => Navigator.pop(context),
+                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A), foregroundColor: Colors.white),
+                onPressed: isVerifying ? null : () async {
+                  setStateDialog(() => isVerifying = true);
+                  
+                  final user = await DatabaseHelper.instance.loginUser(
+                    usernameController.text.trim(),
+                    passwordController.text,
+                  );
+
+                  final currentUserId = UserSession.instance.currentUserId;
+                  
+                  if (user != null && user[DatabaseHelper.columnUserId] == currentUserId) {
+                    await _securityHelper.setLockEnabled(false);
+                    
+                    if (mounted) {
+                      Navigator.pop(context);
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Passkey berhasil direset. Silakan atur ulang di Pengaturan.')),
+                      );
+                    }
+                  } else {
+                     setStateDialog(() => isVerifying = false);
+                     if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Verifikasi gagal. Kredensial salah.'), backgroundColor: Colors.red),
+                        );
+                     }
+                  }
+                },
+                child: const Text('Verifikasi'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Kunci Aplikasi'),
-        backgroundColor: const Color(0xFFFF6B4A),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        // Jangan tampilkan tombol back jika sedang buka kunci app
-        automaticallyImplyLeading: widget.purpose != LockScreenPurpose.unlockApp,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.lock_outline, size: 80, color: Color(0xFFFF6B4A)),
-            const SizedBox(height: 32),
-            Text(
-              _message,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFFF6B4A),
+      appBar: widget.purpose == LockScreenPurpose.unlockApp
+          ? null
+          : AppBar(
+              title: const Text('Kunci Aplikasi'),
+              backgroundColor: const Color(0xFFFF6B4A),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 40),
+              const Icon(Icons.lock_outline, size: 60, color: Color(0xFFFF6B4A)),
+              const SizedBox(height: 24),
+              Text(
+                _message,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFFF6B4A)),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            _buildPinDisplay(),
-            const Spacer(),
-            _buildNumpad(),
-          ],
-        ),
-      ),
-    );
-  }
-  Widget _buildPinDisplay() {
-    int length = _pinController.text.length;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: index < length 
-              ? const Color(0xFFFF6B4A) 
-              : Colors.grey.shade300,
-            boxShadow: index < length 
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFFF6B4A).withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-          ),
-        );
-      }),
-    );
-  }
-  Widget _buildNumpad() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: 12,
-      itemBuilder: (context, index) {
-        String text;
-        VoidCallback? onTap;
-
-        if (index < 9) { // Tombol 1-9
-          text = (index + 1).toString();
-          onTap = () => _onNumpadTapped(text);
-          return _buildNumpadButton(text, onTap);
-        } else if (index == 9) { // Tombol kosong
-          return const SizedBox();
-        } else if (index == 10) { // Tombol 0
-          text = '0';
-          onTap = () => _onNumpadTapped(text);
-          return _buildNumpadButton(text, onTap);
-        } else { // Tombol backspace
-          return _buildBackspaceButton();
-        }
-      },
-    );
-  }
-
-  Widget _buildNumpadButton(String text, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.grey.shade100,
-            border: Border.all(
-              color: Colors.grey.shade300,
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFFF6B4A),
+              const SizedBox(height: 40),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: index < _pinController.text.length ? const Color(0xFFFF6B4A) : Colors.grey[300],
+                    ),
+                  );
+                }),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  Widget _buildBackspaceButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _onBackspace,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.grey.shade100,
-            border: Border.all(
-              color: Colors.grey.shade300,
-              width: 1,
-            ),
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.backspace_outlined,
-              size: 32,
-              color: Color(0xFFFF6B4A),
-            ),
+              const Spacer(),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 12,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, childAspectRatio: 1.5, mainAxisSpacing: 16, crossAxisSpacing: 16,
+                ),
+                itemBuilder: (context, index) {
+                  if (index == 9) {
+                    return widget.purpose == LockScreenPurpose.unlockApp 
+                      ? Center(
+                          child: TextButton(
+                            onPressed: _showForgotPinDialog,
+                            child: const Text('Lupa?', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                          ),
+                        )
+                      : const SizedBox();
+                  }
+                  if (index == 11) {
+                    return IconButton(
+                      onPressed: _onBackspace,
+                      icon: const Icon(Icons.backspace_outlined, color: Color(0xFFFF6B4A)),
+                    );
+                  }
+                  final number = index == 10 ? '0' : '${index + 1}';
+                  return InkWell(
+                    onTap: () => _onNumpadTapped(number),
+                    borderRadius: BorderRadius.circular(30),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(number, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFFF6B4A))),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

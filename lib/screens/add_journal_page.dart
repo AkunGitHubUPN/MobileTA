@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../helpers/database_helper.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../helpers/notification_helper.dart';
 import '../helpers/milestone_helper.dart';
+import '../helpers/location_helper.dart';
 import 'location_picker_page.dart';
 import 'package:intl/intl.dart';
+import '../helpers/user_session.dart';
 
 class AddJournalPage extends StatefulWidget {
   const AddJournalPage({super.key});
@@ -67,30 +67,6 @@ class _AddJournalPageState extends State<AddJournalPage> {
     });
   }
 
-  Future<String> _getAddressFromCoords(Position position) async {
-    try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${position.latitude}&lon=${position.longitude}',
-      );
-
-      final response = await http.get(
-        url,
-        headers: {
-          'User-Agent': 'jejak_pena_app',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['display_name'] ?? 'Lokasi tidak dikenal';
-      } else {
-        return 'Gagal mengambil nama lokasi';
-      }
-    } catch (e) {
-      return 'Error: ${e.toString()}';
-    }
-  }
-
   void _getCurrentLocation() async {
     setState(() {
       _isLoadingLocation = true;
@@ -114,7 +90,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      String address = await _getAddressFromCoords(position);
+      final address = await LocationHelper.getAddressFromPosition(position);
       setState(() {
         _currentPosition = position;
         _addressString = address;
@@ -200,6 +176,12 @@ class _AddJournalPageState extends State<AddJournalPage> {
 
     String tanggal = _selectedDate.toIso8601String();
 
+    final userId = UserSession.instance.currentUserId;
+    if (userId == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error sesi login. Silakan login ulang.')));
+       return;
+    }
+
     Map<String, dynamic> journalRow = {
       DatabaseHelper.columnJudul: judul,
       DatabaseHelper.columnCerita: cerita,
@@ -207,6 +189,7 @@ class _AddJournalPageState extends State<AddJournalPage> {
       DatabaseHelper.columnLatitude: _currentPosition?.latitude,
       DatabaseHelper.columnLongitude: _currentPosition?.longitude,
       DatabaseHelper.columnNamaLokasi: _addressString,
+      DatabaseHelper.columnJournalUserId: userId,
     };
 
     final journalId = await dbHelper.createJournal(journalRow);
@@ -271,7 +254,6 @@ class _AddJournalPageState extends State<AddJournalPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Lokasi Section
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
@@ -365,7 +347,6 @@ class _AddJournalPageState extends State<AddJournalPage> {
               ),
             ),
 
-            // Form inputs
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(

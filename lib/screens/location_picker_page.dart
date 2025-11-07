@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../helpers/location_helper.dart';
 
 class LocationPickerPage extends StatefulWidget {
   final Position? initialPosition;
@@ -19,22 +18,20 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   LatLng? _selectedLocation;
   String _selectedAddress = "Pilih lokasi di peta";
   bool _isLoadingAddress = false;
-  Position? _userPosition; // Tambahkan ini
+  Position? _userPosition;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
 
-    // Jika ada initial position, set itu sebagai lokasi awal
     if (widget.initialPosition != null) {
       _selectedLocation = LatLng(
         widget.initialPosition!.latitude,
         widget.initialPosition!.longitude,
       );
     }
-
-    _getUserLocation(); // Tambahkan ini
+    _getUserLocation();
   }
 
   @override
@@ -43,7 +40,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     super.dispose();
   }
 
-  // Fungsi untuk mendapatkan nama alamat dari koordinat
   Future<void> _getAddressFromCoords(LatLng location) async {
     setState(() {
       _isLoadingAddress = true;
@@ -51,27 +47,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     });
 
     try {
-      final url = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${location.latitude}&lon=${location.longitude}',
-      );
-
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'jejak_pena_app'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _selectedAddress = data['display_name'] ?? 'Lokasi tidak dikenal';
-          _isLoadingAddress = false;
-        });
-      } else {
-        setState(() {
-          _selectedAddress = 'Gagal mengambil nama lokasi';
-          _isLoadingAddress = false;
-        });
-      }
+      final address = await LocationHelper.getAddressFromCoords(location);
+      setState(() {
+        _selectedAddress = address;
+        _isLoadingAddress = false;
+      });
     } catch (e) {
       setState(() {
         _selectedAddress = 'Error: ${e.toString()}';
@@ -80,7 +60,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
-  // Tambahkan method untuk mendapatkan lokasi user
   Future<void> _getUserLocation() async {
     try {
       final permission = await Geolocator.checkPermission();
@@ -103,7 +82,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
-  // Tambahkan method untuk center ke user location
   void _centerToUserLocation() {
     if (_userPosition != null) {
       _mapController.move(
@@ -113,7 +91,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
   }
 
-  // Fungsi untuk zoom in
   void _zoomIn() {
     _mapController.move(
       _mapController.camera.center,
@@ -121,7 +98,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     );
   }
 
-  // Fungsi untuk zoom out
   void _zoomOut() {
     _mapController.move(
       _mapController.camera.center,
@@ -129,10 +105,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     );
   }
 
-  // Fungsi untuk memilih lokasi
   void _confirmLocation() {
     if (_selectedLocation != null) {
-      // Return Position object ke halaman sebelumnya
       final position = Position(
         longitude: _selectedLocation!.longitude,
         latitude: _selectedLocation!.latitude,
@@ -176,7 +150,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       ),
       body: Stack(
         children: [
-          // PETA
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
@@ -193,16 +166,13 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               },
             ),
             children: [
-              // Layer 1: Tile Layer
               TileLayer(
                 urlTemplate:
                     'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                 subdomains: const ['a', 'b', 'c'],
               ),
-              // Layer 2: Markers
               MarkerLayer(
                 markers: [
-                  // User current location
                   if (_userPosition != null)
                     Marker(
                       width: 40.0,
@@ -232,17 +202,13 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                         ),
                       ),
                     ),
-                  // Selected location
                   if (_selectedLocation != null)
                     Marker(
                       width: 80.0,
                       height: 80.0,
                       point: _selectedLocation!,
                       child: Transform.translate(
-                        offset: const Offset(
-                          0,
-                          -20,
-                        ), // Geser ke atas setengah tinggi marker
+                        offset: const Offset(0, -20),
                         child: GestureDetector(
                           onTap: () {
                             _confirmLocation();
@@ -260,13 +226,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             ],
           ),
 
-          // KONTROL ZOOM (Kanan Bawah)
           Positioned(
             right: 16,
             bottom: 200,
             child: Column(
               children: [
-                // Tombol Center to User Location
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'center_location_picker',
@@ -281,7 +245,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Tombol Zoom In
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'zoom_in_location',
@@ -291,7 +254,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                   child: const Icon(Icons.add),
                 ),
                 const SizedBox(height: 8),
-                // Tombol Zoom Out
                 FloatingActionButton(
                   mini: true,
                   heroTag: 'zoom_out_location',
@@ -304,7 +266,6 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             ),
           ),
 
-          // INFO LOKASI (Bottom Section)
           Positioned(
             bottom: 0,
             left: 0,

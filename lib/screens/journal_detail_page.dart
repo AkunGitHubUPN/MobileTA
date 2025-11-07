@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../helpers/database_helper.dart';
+import '../helpers/location_helper.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class JournalDetailPage extends StatefulWidget {
-  final int journalId; // Halaman ini harus menerima ID Jurnal
-
+  final int journalId;
   const JournalDetailPage({super.key, required this.journalId});
 
   @override
@@ -15,15 +15,14 @@ class JournalDetailPage extends StatefulWidget {
 class _JournalDetailPageState extends State<JournalDetailPage> {
   final dbHelper = DatabaseHelper.instance;
 
-  Map<String, dynamic>? _journal; // Untuk data jurnal (judul, cerita)
-  List<Map<String, dynamic>> _photos = []; // Untuk daftar foto
+  Map<String, dynamic>? _journal;
+  List<Map<String, dynamic>> _photos = [];
   bool _isLoading = true;
-  bool _isEditMode = false; // Toggle edit mode
-  // Controllers untuk edit
+  bool _isEditMode = false;
   late TextEditingController _judulController;
   late TextEditingController _ceritaController;
-  List<String> _photosToDelete = []; // Foto yang akan dihapus
-  List<String> _newPhotoPaths = []; // Foto baru yang ditambahkan
+  List<String> _photosToDelete = [];
+  List<String> _newPhotoPaths = [];
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -42,7 +41,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
   }
 
   void _loadJournalData() async {
-    // Ambil data jurnal DAN data foto
     final journalData = await dbHelper.getJournalById(widget.journalId);
     final photoData = await dbHelper.getPhotosForJournal(widget.journalId);
 
@@ -57,7 +55,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
 
   Future<void> _saveChanges() async {
     try {
-      // Update jurnal
       Map<String, dynamic> updatedJournal = {
         DatabaseHelper.columnId: widget.journalId,
         DatabaseHelper.columnJudul: _judulController.text,
@@ -67,9 +64,11 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         DatabaseHelper.columnLongitude:
             _journal![DatabaseHelper.columnLongitude],
         DatabaseHelper.columnNamaLokasi: _journal![DatabaseHelper.columnNamaLokasi],
-      };      await dbHelper.updateJournal(updatedJournal);
+        DatabaseHelper.columnJournalUserId: _journal![DatabaseHelper.columnJournalUserId],
+      };
+      
+      await dbHelper.updateJournal(updatedJournal);
 
-      // Hapus foto yang ditandai
       for (String photoPath in _photosToDelete) {
         final photo = _photos.firstWhere(
           (p) => p[DatabaseHelper.columnPhotoPath] == photoPath,
@@ -80,7 +79,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         }
       }
 
-      // Tambahkan foto baru
       for (String newPhotoPath in _newPhotoPaths) {
         Map<String, dynamic> photoRow = {
           DatabaseHelper.columnPhotoJournalId: widget.journalId,
@@ -89,7 +87,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
         await dbHelper.createJournalPhoto(photoRow);
       }
 
-      // Reload data
       _photosToDelete.clear();
       _newPhotoPaths.clear();
       _loadJournalData();
@@ -117,6 +114,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       }
     }
   }
+
   void _togglePhotoForDelete(String photoPath) {
     setState(() {
       if (_photosToDelete.contains(photoPath)) {
@@ -150,6 +148,72 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       }
     }
   }
+
+  Future<void> _deleteJournal() async {
+    try {
+      for (var photo in _photos) {
+        await dbHelper.deletePhoto(photo[DatabaseHelper.columnPhotoId]);
+      }
+      
+      await dbHelper.deleteJournal(widget.journalId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Jurnal berhasil dihapus'),
+            backgroundColor: Color(0xFFFF6B4A),
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error menghapus jurnal: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Hapus'),
+          content: Text(
+            'Anda yakin ingin menghapus jurnal \'${_journal![DatabaseHelper.columnJudul]}\'?\n\nTindakan ini tidak dapat dibatalkan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteJournal();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -166,18 +230,14 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       );
     }
 
-    // Format tanggal untuk tampilan yang lebih rapi
     String tanggal = _journal![DatabaseHelper.columnTanggal];
-    String tanggalFormatted = tanggal.substring(0, 10); // YYYY-MM-DD
+    String tanggalFormatted = tanggal.substring(0, 10);
     
-    // Parse lokasi untuk menampilkan dengan lebih rapi
     String locationName =
         _journal![DatabaseHelper.columnNamaLokasi] ?? "Lokasi Tidak Diketahui";
-    List<String> parts = locationName.split(',');
-    if (parts.length >= 3) {
-      locationName =
-          "${parts[parts.length - 3].trim()}, ${parts[parts.length - 1].trim()}";
-    }    return Scaffold(
+    locationName = LocationHelper.formatLocationName(locationName);
+
+    return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(_journal![DatabaseHelper.columnJudul]),
@@ -188,14 +248,12 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
           icon: Icon(_isEditMode ? Icons.close : Icons.arrow_back),
           onPressed: () {
             if (_isEditMode) {
-              // Batalkan edit mode
               setState(() {
                 _isEditMode = false;
                 _photosToDelete.clear();
-                _loadJournalData(); // Reload data untuk reset form
+                _loadJournalData();
               });
             } else {
-              // Kembali ke page sebelumnya
               Navigator.pop(context);
             }
           },
@@ -210,18 +268,23 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                 });
               },
             )
-          else
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _showDeleteConfirmation,
+            ),
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveChanges,
             ),
+          ],
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 30),            // --- GALERI FOTO ---
+            SizedBox(height: 30),
             if (_photos.isNotEmpty || _newPhotoPaths.isNotEmpty)
               SizedBox(
                 height: 250,
@@ -229,7 +292,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                   scrollDirection: Axis.horizontal,
                   itemCount: _photos.length + _newPhotoPaths.length + (_isEditMode ? 1 : 0),
                   itemBuilder: (context, index) {
-                    // Tombol tambah foto di akhir (hanya saat edit mode)
                     if (_isEditMode && index == _photos.length + _newPhotoPaths.length) {
                       return Padding(
                         padding: EdgeInsets.only(
@@ -274,7 +336,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                       );
                     }
 
-                    // Ambil path foto (dari _photos atau _newPhotoPaths)
                     String path;
                     bool isNewPhoto = index >= _photos.length;
                     if (isNewPhoto) {
@@ -304,7 +365,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                               ),
                             ),
                           ),
-                          // Tanda silang saat edit mode (hanya untuk foto lama)
                           if (_isEditMode && !isNewPhoto)
                             Positioned(
                               top: 8,
@@ -334,7 +394,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                                 ),
                               ),
                             ),
-                          // Ikon hapus untuk foto baru
                           if (_isEditMode && isNewPhoto)
                             Positioned(
                               top: 8,
@@ -389,12 +448,11 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
 
             const SizedBox(height: 24),
 
-            // --- KONTEN UTAMA ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [                  // JUDUL
+                children: [
                   if (_isEditMode)
                     TextField(
                       controller: _judulController,
@@ -433,7 +491,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                     ),
                   const SizedBox(height: 16),
 
-                  // METADATA CARD (TANGGAL & LOKASI)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -453,7 +510,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // TANGGAL
                         Row(
                           children: [
                             const Icon(
@@ -470,7 +526,6 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // LOKASI
                         if (_journal![DatabaseHelper.columnNamaLokasi] !=
                             null)
                           Row(
@@ -496,14 +551,15 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // CERITA SECTION TITLE
                   Text(
                     'Cerita Pena',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFFF6B4A),
                     ),
-                  ),                  const SizedBox(height: 12),                  // CERITA CONTENT
+                  ),
+                  const SizedBox(height: 12),
+
                   if (_isEditMode)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 30),

@@ -1,50 +1,61 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'user_session.dart';
 
 class SecurityHelper {
+  SecurityHelper._privateConstructor();
+  static final SecurityHelper instance = SecurityHelper._privateConstructor();
+
   final _storage = const FlutterSecureStorage();
-  
-  // Ini adalah key untuk menyimpan PIN di secure storage
-  static const _pinKey = 'app_passkey';
-  
-  // Ini adalah key untuk menyimpan status (on/off) di shared preferences
-  static const _lockEnabledKey = 'isAppLockEnabled';
 
-  // --- Fungsi untuk PIN (Secure) ---
+  String _getPinKey(int userId) => 'pin_user_$userId';
+  String _getLockEnabledKey(int userId) => 'lock_enabled_user_$userId';
 
-  // Menyimpan PIN baru
+  int _getCurrentUserId() {
+    final userId = UserSession.instance.currentUserId;
+    if (userId == null) {
+      throw Exception("Tidak ada user yang aktif saat mencoba akses keamanan.");
+    }
+    return userId;
+  }
+
   Future<void> setPin(String pin) async {
-    await _storage.write(key: _pinKey, value: pin);
+    final userId = _getCurrentUserId();
+    await _storage.write(key: _getPinKey(userId), value: pin);
   }
 
-  // Mengambil PIN yang tersimpan
   Future<String?> getPin() async {
-    return await _storage.read(key: _pinKey);
+    final userId = _getCurrentUserId();
+    return await _storage.read(key: _getPinKey(userId));
   }
 
-  // Menghapus PIN
   Future<void> deletePin() async {
-    await _storage.delete(key: _pinKey);
+    final userId = _getCurrentUserId();
+    await _storage.delete(key: _getPinKey(userId));
   }
 
-  // Cek apakah PIN sudah pernah di-set
   Future<bool> isPinSet() async {
     final pin = await getPin();
     return pin != null && pin.isNotEmpty;
   }
 
-  // --- Fungsi untuk Status (Non-Secure) ---
-
-  // Mengaktifkan atau menonaktifkan kunci aplikasi
   Future<void> setLockEnabled(bool isEnabled) async {
+    final userId = _getCurrentUserId();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_lockEnabledKey, isEnabled);
+    await prefs.setBool(_getLockEnabledKey(userId), isEnabled);
+    
+    if (!isEnabled) {
+      await deletePin();
+    }
   }
 
-  // Cek apakah kunci aplikasi sedang aktif (enabled)
   Future<bool> isLockEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    // Default-nya false (tidak aktif)
-    return prefs.getBool(_lockEnabledKey) ?? false;
+    try {
+      final userId = _getCurrentUserId();
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_getLockEnabledKey(userId)) ?? false;
+    } catch (e) {
+      return false;
+    }
   }
 }

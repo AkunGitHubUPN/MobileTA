@@ -3,8 +3,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import '../helpers/database_helper.dart';
+import '../helpers/location_helper.dart';
 import 'add_journal_page.dart';
 import 'journal_detail_page.dart';
+import '../helpers/user_session.dart';
 
 enum SortOption { terbaru, terlama }
 
@@ -29,7 +31,6 @@ class HomeTabPageState extends State<HomeTabPage> {
   bool _filterHanyaFoto = false;
   bool _filterHanyaLokasi = false;
 
-  // Tambahkan variable untuk lokasi user
   Position? _userPosition;
 
   bool get _isFilterActive =>
@@ -43,7 +44,12 @@ class HomeTabPageState extends State<HomeTabPage> {
     _mapController = MapController();
     _loadData();
     _searchController.addListener(_applySearchAndFilters);
-    _getUserLocation(); // Tambahkan ini
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _getUserLocation();
+      }
+    });
   }
 
   @override
@@ -60,7 +66,10 @@ class HomeTabPageState extends State<HomeTabPage> {
     });
 
     try {
-      final data = await dbHelper.getAllJournalsWithPhotoCount();
+      final userId = UserSession.instance.currentUserId;
+      if (userId == null) return;
+
+      final data = await dbHelper.getJournalsForUserWithPhotoCount(userId);
 
       if (!mounted) return;
 
@@ -123,7 +132,6 @@ class HomeTabPageState extends State<HomeTabPage> {
       MaterialPageRoute(builder: (context) => const AddJournalPage()),
     );
 
-    // Setelah kembali dari AddJournalPage
     if (mounted) {
       _loadData();
       _searchController.clear();
@@ -254,35 +262,58 @@ class HomeTabPageState extends State<HomeTabPage> {
     );
   }
 
-  // Tambahkan method untuk mendapatkan lokasi user
   Future<void> _getUserLocation() async {
     try {
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      
+      print('Location permission: $permission');
+      
+      if (permission == LocationPermission.denied) {
+        final newPermission = await Geolocator.requestPermission();
+        print('Requested permission: $newPermission');
+        
+        if (newPermission == LocationPermission.denied ||
+            newPermission == LocationPermission.deniedForever) {
+          print('Permission denied by user');
+          return;
+        }
+      } else if (permission == LocationPermission.deniedForever) {
+        print('Permission denied forever');
         return;
       }
 
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
+
+      print('Got position: ${position.latitude}, ${position.longitude}');
 
       if (mounted) {
         setState(() {
           _userPosition = position;
         });
+        print('User position updated in state');
       }
     } catch (e) {
       print('Error getting user location: $e');
     }
   }
 
-  // Tambahkan method untuk center map ke lokasi user
   void _centerToUserLocation() {
     if (_userPosition != null) {
+      print('Centering to user location: ${_userPosition!.latitude}, ${_userPosition!.longitude}');
       _mapController.move(
         LatLng(_userPosition!.latitude, _userPosition!.longitude),
         _mapController.camera.zoom,
+      );
+    } else {
+      print('User position is null');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lokasi user belum didapat'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
       );
     }
   }
@@ -297,7 +328,6 @@ class HomeTabPageState extends State<HomeTabPage> {
             )
           : Column(
               children: [
-                // Header dengan judul
                 Container(
                   color: const Color(0xFFFF6B4A),
                   padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -312,7 +342,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 16), // Search bar
+                      const SizedBox(height: 16),
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -379,9 +409,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                     ],
                   ),
                 ),
-                // Map Section
                 Expanded(flex: 6, child: _buildMapSection()),
-                // Journal List Section
                 Expanded(flex: 4, child: _buildJournalListSection()),
               ],
             ),
@@ -396,7 +424,6 @@ class HomeTabPageState extends State<HomeTabPage> {
   Widget _buildMapSection() {
     List<Marker> markers = [];
 
-    // Tambahkan marker untuk user location terlebih dahulu (layer bawah)
     if (_userPosition != null) {
       markers.add(
         Marker(
@@ -424,7 +451,6 @@ class HomeTabPageState extends State<HomeTabPage> {
       );
     }
 
-    // Tambahkan marker jurnal dari database (layer atas)
     final journalMarkers = _filteredJournals
         .map((journal) {
           if (journal[DatabaseHelper.columnLatitude] == null) {
@@ -578,7 +604,6 @@ class HomeTabPageState extends State<HomeTabPage> {
         padding: const EdgeInsets.all(12.0),
         itemCount: _filteredJournals.length + 1,
         itemBuilder: (context, index) {
-          // Tambahkan SizedBox di bawah daftar jurnal
           if (index == _filteredJournals.length) {
             return const SizedBox(height: 10);
           }
@@ -588,11 +613,7 @@ class HomeTabPageState extends State<HomeTabPage> {
           String locationName =
               journal[DatabaseHelper.columnNamaLokasi] ??
               "Lokasi Tidak Diketahui";
-          List<String> parts = locationName.split(',');
-          if (parts.length >= 3) {
-            locationName =
-                "${parts[parts.length - 3].trim()}, ${parts[parts.length - 1].trim()}";
-          }
+          locationName = LocationHelper.formatLocationName(locationName);
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12.0),

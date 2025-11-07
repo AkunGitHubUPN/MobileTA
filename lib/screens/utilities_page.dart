@@ -239,7 +239,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Header
           Container(
             color: const Color(0xFFFF6B4A),
             padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
@@ -255,12 +254,10 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
               ),
             ),
           ),
-          // Content
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                // Card 1: Konverter Mata Uang
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -409,7 +406,6 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
 
                 const SizedBox(height: 16),
 
-                // Card 2: Jam Dunia
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,

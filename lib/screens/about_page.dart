@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -30,7 +29,6 @@ class _AboutPageState extends State<AboutPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header dengan background orange
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -84,7 +82,6 @@ class _AboutPageState extends State<AboutPage> {
               ),
             ),
 
-            // Content
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -92,7 +89,6 @@ class _AboutPageState extends State<AboutPage> {
                 children: [
                   const SizedBox(height: 16),
 
-                  // Card Tentang Aplikasi
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -124,7 +120,9 @@ class _AboutPageState extends State<AboutPage> {
                                 size: 24,
                               ),
                             ),
+
                             const SizedBox(width: 12),
+                            
                             const Text(
                               'Tentang Aplikasi',
                               style: TextStyle(
@@ -135,7 +133,9 @@ class _AboutPageState extends State<AboutPage> {
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 16),
+                        
                         const Text(
                           "JejakPena adalah buku diary digital pribadi yang mengubah setiap langkah menjadi cerita abadi. Membuat setiap jejak petualangan terbentang di seluruh dunia, tersimpan aman, dan berfungsi penuh selamanya.",
                           style: TextStyle(
@@ -151,7 +151,6 @@ class _AboutPageState extends State<AboutPage> {
 
                   const SizedBox(height: 24),
 
-                  // Card Author
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -195,8 +194,9 @@ class _AboutPageState extends State<AboutPage> {
                             ),
                           ],
                         ),
+                        
                         const SizedBox(height: 20),
-                        // Foto Author
+
                         Container(
                           width: 120,
                           height: 120,
@@ -268,7 +268,6 @@ class _AboutPageState extends State<AboutPage> {
 
                   const SizedBox(height: 24),
 
-                  // Card Saran dan Kesan
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -338,7 +337,6 @@ class _AboutPageState extends State<AboutPage> {
 
                   const SizedBox(height: 24),
 
-                  // Card Info Versi
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),

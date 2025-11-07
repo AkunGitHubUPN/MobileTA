@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'journal_list_page.dart';
-import 'map_page.dart';
-import 'add_journal_page.dart';
 import 'utilities_page.dart';
 import 'settings_page.dart';
 import 'home_tab_page.dart';
@@ -16,15 +13,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  final GlobalKey<HomeTabPageState> _homeKey = GlobalKey();
-
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
     _pages = [
-      HomeTabPage(key: _homeKey),
+      const HomeTabPage(),
       const UtilitiesPage(),
       const SettingsPage(),
     ];

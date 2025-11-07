@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import '../helpers/security_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/notification_helper.dart';
+import '../helpers/user_session.dart';
+import '../helpers/security_helper.dart';
 import 'lock_screen_page.dart';
 import 'about_page.dart';
+import 'login_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -12,11 +15,10 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _securityHelper = SecurityHelper();
   final _notificationHelper = NotificationHelper.instance;
-  bool _isLockEnabled = false;
-  bool _isPinSet = false;
   bool _isNotificationEnabled = true;
+  final _securityHelper = SecurityHelper.instance;
+  bool _isLockEnabled = false;
 
   @override
   void initState() {
@@ -24,42 +26,17 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadSettings();
   }
 
-  Future<void> _loadSettings() async {
-    final isLockEnabled = await _securityHelper.isLockEnabled();
-    final isPinSet = await _securityHelper.isPinSet();
-
-    setState(() {
-      _isLockEnabled = isLockEnabled;
-      _isPinSet = isPinSet;
-    });
-  }
-
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFFFF6B4A),
-      ),
-    );
-  }
-
   Future<void> _onLockEnabledChanged(bool value) async {
-    if (value == true) {
-      if (!_isPinSet) {
-        final result = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                LockScreenPage(purpose: LockScreenPurpose.setupPin),
-          ),
-        );
-        if (result == true) {
-          _loadSettings();
-          _showSnackBar('Kunci aplikasi diaktifkan');
-        }
-      } else {
-        await _securityHelper.setLockEnabled(true);
+    if (value) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              const LockScreenPage(purpose: LockScreenPurpose.setupPin),
+        ),
+      );
+
+      if (result == true) {
         setState(() {
           _isLockEnabled = true;
         });
@@ -74,35 +51,77 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _onChangePasskey() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            LockScreenPage(purpose: LockScreenPurpose.changePin),
-      ),
+  void _showSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFFF6B4A)),
     );
+  }
 
-    if (result == true) {
-      _showSnackBar('Passkey berhasil diubah');
-    }
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isNotificationEnabled = prefs.getBool('notification_enabled') ?? true;
+
+    final isLockEnabled = await _securityHelper.isLockEnabled();
+    setState(() {
+      _isLockEnabled = isLockEnabled;
+      _isNotificationEnabled = isNotificationEnabled;
+    });
   }
 
   Future<void> _onNotificationEnabledChanged(bool value) async {
     setState(() {
       _isNotificationEnabled = value;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_enabled', value);
 
     if (value) {
-      _showSnackBar('Notifikasi telah diaktifkan');
-      await _notificationHelper.showInstantNotification(
-        id: DateTime.now().millisecondsSinceEpoch % 100000,
-        title: 'Notifikasi Aktif! 🔔',
-        body: 'Notifikasi aplikasi telah dinyalakan.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notifikasi diaktifkan'),
+          backgroundColor: Color(0xFFFF6B4A),
+        ),
       );
-    } else {
-      _showSnackBar('Notifikasi telah dimatikan');
+      await _notificationHelper.showInstantNotification(
+        id: 999,
+        title: 'Notifikasi Aktif! 🔔',
+        body: 'JejakPena akan mengingatkan momen berharga Anda.',
+      );
     }
+  }
+
+  void _doLogout() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Keluar Aplikasi'),
+        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              await UserSession.instance.clearSession();
+
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                  (Route<dynamic> route) => false,
+                );
+              }
+            },
+            child: const Text(
+              'Ya, Keluar',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -111,14 +130,13 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // Header
           Container(
             color: const Color(0xFFFF6B4A),
             padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
             child: const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Settings',
+                'Pengaturan',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -127,140 +145,139 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
           ),
-          // Content
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
-                // Card Keamanan
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                _buildSettingsCard(
+                  title: 'Keamanan',
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Kunci Aplikasi'),
+                      subtitle: const Text(
+                        'Minta passkey saat aplikasi dibuka',
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                        child: Text(
-                          'Keamanan',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFF6B4A),
-                          ),
-                        ),
-                      ),
-                      SwitchListTile(
-                        title: const Text('Aktifkan Kunci Aplikasi'),
-                        value: _isLockEnabled,
-                        activeColor: const Color(0xFFFF6B4A),
-                        onChanged: _onLockEnabledChanged,
-                      ),
+                      value: _isLockEnabled,
+                      activeColor: const Color(0xFFFF6B4A),
+                      onChanged: _onLockEnabledChanged,
+                    ),
+                    if (_isLockEnabled) ...[
                       const Divider(height: 1),
                       ListTile(
+                        leading: const Icon(
+                          Icons.lock_reset,
+                          color: Colors.grey,
+                        ),
                         title: const Text('Ubah Passkey'),
-                        trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF6B4A)),
-                        enabled: _isPinSet,
-                        onTap: _onChangePasskey,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Card Notifikasi
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                        child: Text(
-                          'Notifikasi',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFF6B4A),
-                          ),
-                        ),
-                      ),
-                      SwitchListTile(
-                        title: const Text('Aktifkan Notifikasi'),
-                        value: _isNotificationEnabled,
-                        activeColor: const Color(0xFFFF6B4A),
-                        onChanged: _onNotificationEnabledChanged,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Card Tentang
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),
-                        child: Text(
-                          'Tentang',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFFFF6B4A),
-                          ),
-                        ),
-                      ),
-                      ListTile(
-                        title: const Text('Tentang Aplikasi'),
-                        subtitle: const Text('Informasi aplikasi dan feedback'),
-                        trailing: const Icon(Icons.chevron_right, color: Color(0xFFFF6B4A)),
-                        onTap: () {
-                          Navigator.push(
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () async {
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const AboutPage(),
+                              builder: (context) => const LockScreenPage(
+                                purpose: LockScreenPurpose.changePin,
+                              ),
                             ),
                           );
                         },
                       ),
                     ],
-                  ),
+                  ],
+                  
+                ),
+                const SizedBox(height: 16),
+
+                _buildSettingsCard(
+                  title: 'Umum',
+                  children: [
+                    SwitchListTile(
+                      title: const Text('Notifikasi Aplikasi'),
+                      subtitle: const Text(
+                        'Aktifkan notifikasi di perangkat ini',
+                      ),
+                      value: _isNotificationEnabled,
+                      activeColor: const Color(0xFFFF6B4A),
+                      onChanged: _onNotificationEnabledChanged,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildSettingsCard(
+                  title: 'Lainnya',
+                  children: [
+                    ListTile(
+                      leading: const Icon(
+                        Icons.info_outline,
+                        color: Color(0xFFFF6B4A),
+                      ),
+                      title: const Text('Tentang Aplikasi'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildSettingsCard(
+                  title: 'Akun',
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text('Keluar Akun'),
+                      onTap: _doLogout,
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFFF6B4A),
+                fontSize: 16,
+              ),
+            ),
+          ),
+          ...children,
         ],
       ),
     );

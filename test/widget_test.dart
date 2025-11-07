@@ -7,12 +7,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:jejak_pena/main.dart';
 
-// --- BARU ---
-// Kita perlu import HomePage untuk diberikan ke MyApp
-import 'package:jejak_pena/screens/home_page.dart';
 // ---
 
 void main() {
@@ -21,7 +17,7 @@ void main() {
     
     // --- MODIFIKASI ---
     // Berikan HomePage sebagai halaman awal untuk tes ini
-    await tester.pumpWidget(const MyApp(initialPage: HomePage()));
+    await tester.pumpWidget(const MyApp());
     // ---
 
     // Verify that our counter starts at 0.
