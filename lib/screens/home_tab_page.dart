@@ -127,7 +127,7 @@ class HomeTabPageState extends State<HomeTabPage> {
   }
 
   Future<void> _onAddJournal() async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddJournalPage()),
     );
