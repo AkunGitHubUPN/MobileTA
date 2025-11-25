@@ -183,6 +183,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Konfirmasi Hapus'),
           content: Text(
             'Anda yakin ingin menghapus jurnal \'${_journal![DatabaseHelper.columnJudul]}\'?\n\nTindakan ini tidak dapat dibatalkan.',
@@ -617,6 +618,7 @@ class _JournalDetailPageState extends State<JournalDetailPage> {
                         ),
                       ),
                     ),
+                  SizedBox(height: 30),
                 ],
               ),
             ),

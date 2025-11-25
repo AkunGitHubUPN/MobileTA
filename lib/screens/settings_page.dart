@@ -94,6 +94,7 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Keluar Aplikasi'),
         content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
         actions: [

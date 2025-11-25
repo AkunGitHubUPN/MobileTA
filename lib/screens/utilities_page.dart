@@ -275,7 +275,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Konverter Mata Uang",
+                        "Konversi Mata Uang",
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -290,6 +290,8 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                         ],
                         decoration: InputDecoration(
+                          fillColor: Colors.white,
+                          filled: true,
                           labelText: "Jumlah",
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -307,6 +309,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
+                                color: Colors.white,
                                 border: Border.all(color: Colors.grey[300]!),
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -335,6 +338,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
+                                color: Colors.white,
                                 border: Border.all(color: Colors.grey[300]!),
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -361,7 +365,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                         children: [
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B4A),
+                              backgroundColor: Colors.deepOrange,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                               shape: RoundedRectangleBorder(
@@ -378,7 +382,7 @@ class _UtilitiesPageState extends State<UtilitiesPage> {
                                       color: Colors.white,
                                     ),
                                   )
-                                : const Text("Konversi", style: TextStyle(fontSize: 16)),
+                                : const Text("Konverter", style: TextStyle(fontSize: 16)),
                           ),
                           const SizedBox(width: 16),
                           Expanded(

@@ -10,7 +10,6 @@ class NotificationHelper {
 
   Future<bool> _isNotificationEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    // Default true jika belum pernah diset
     return prefs.getBool('notification_enabled') ?? true;
   }
 

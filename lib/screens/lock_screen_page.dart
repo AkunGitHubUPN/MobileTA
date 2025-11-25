@@ -145,6 +145,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
+            backgroundColor: Colors.white,
             title: const Text('Lupa Passkey?'),
             content: Column(
               mainAxisSize: MainAxisSize.min,

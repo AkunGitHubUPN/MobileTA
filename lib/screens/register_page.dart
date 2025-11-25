@@ -54,7 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : const Color(0xFFFF6B4A),
+        backgroundColor: isError ? Colors.red[900] : const Color(0xFFFF6B4A),
       ),
     );
   }
@@ -65,7 +65,7 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: const Color(0xFFFF6B4A),
         elevation: 0,
       ),
       body: SafeArea(

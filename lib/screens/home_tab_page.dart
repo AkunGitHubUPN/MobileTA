@@ -195,6 +195,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                     },
                   ),
                   const Divider(),
+                  SizedBox(height: 16),
                   Text(
                     'Filter',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -335,7 +336,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Perjalan Kamu Sejauh Ini:',
+                        'Perjalanan Kamu Sejauh Ini:',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -361,6 +362,7 @@ class HomeTabPageState extends State<HomeTabPage> {
                               children: [
                                 if (_searchController.text.isNotEmpty)
                                   IconButton(
+                                    color: Colors.grey,
                                     icon: const Icon(Icons.clear),
                                     onPressed: () {
                                       _searchController.clear();
@@ -636,6 +638,7 @@ class HomeTabPageState extends State<HomeTabPage> {
               title: Text(
                 journal[DatabaseHelper.columnJudul],
                 style: const TextStyle(
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
